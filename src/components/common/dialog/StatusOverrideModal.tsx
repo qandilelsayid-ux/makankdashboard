@@ -49,6 +49,8 @@ export default function StatusOverrideModal({
     let statusReason = "";
     if (reasonType === "high_demand") {
       statusReason = t("High demand of orders") || "ضغط طلبات";
+    } else if (reasonType === "friday_prayer") {
+      statusReason = "صلاة الجمعة / وقت الصلاة";
     } else if (reasonType === "power_outage") {
       statusReason = t("Power outage") || "انقطاع كهرباء";
     } else if (reasonType === "out_of_stock") {
@@ -116,6 +118,13 @@ export default function StatusOverrideModal({
                 <RadioGroupItem value="high_demand" id="r-high_demand" />
                 <Label htmlFor="r-high_demand" className="cursor-pointer font-medium text-sm text-gray-800 dark:text-gray-200">
                   {t("High demand of orders") || "ضغط طلبات"}
+                </Label>
+              </div>
+
+              <div className="flex items-center space-x-2 space-x-reverse gap-2">
+                <RadioGroupItem value="friday_prayer" id="r-friday_prayer" />
+                <Label htmlFor="r-friday_prayer" className="cursor-pointer font-medium text-sm text-gray-800 dark:text-gray-200">
+                  صلاة الجمعة / وقت الصلاة
                 </Label>
               </div>
 

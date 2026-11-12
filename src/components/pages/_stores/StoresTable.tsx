@@ -18,6 +18,7 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { CheckCircle2, XCircle, Ban } from "lucide-react";
+import StatusOverrideModal from "@/components/common/dialog/StatusOverrideModal";
 
 export default function StoresTable({
   permission,
@@ -35,6 +36,8 @@ export default function StoresTable({
   const pathname = usePathname();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingBulkStatus, setPendingBulkStatus] = useState<string | null>(null);
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
 
   const handleToggle = (id: string) => {
     setSelectedIds(prev =>
@@ -54,7 +57,10 @@ export default function StoresTable({
     });
   };
 
-  const handleBulkStatusChange = async (newStatus: string) => {
+  const performBulkStatusChange = async (
+    newStatus: string,
+    extraData?: { statusReason?: string; busyMinutes?: number }
+  ) => {
     if (selectedIds.length === 0) return;
     setIsSubmitting(true);
     try {
@@ -62,7 +68,7 @@ export default function StoresTable({
         fetchHelper({
           endPoint: ["stores", Number(id), "status"],
           method: "PATCH",
-          body: { status: newStatus }
+          body: { status: newStatus, ...extraData }
         })
       );
       const results = await Promise.all(promises);
@@ -84,6 +90,16 @@ export default function StoresTable({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleBulkStatusChange = async (newStatus: string) => {
+    if (selectedIds.length === 0) return;
+    if (newStatus === "BUSY" || newStatus === "CLOSED") {
+      setPendingBulkStatus(newStatus);
+      setIsStatusModalOpen(true);
+      return;
+    }
+    await performBulkStatusChange(newStatus);
   };
 
   const handleBulkApproval = async (approved: boolean) => {
@@ -269,6 +285,19 @@ export default function StoresTable({
           onToggleAll: handleToggleAll,
           getRowId: row => String(row.id)
         }}
+      />
+      <StatusOverrideModal
+        isOpen={isStatusModalOpen}
+        onClose={() => {
+          setIsStatusModalOpen(false);
+          setPendingBulkStatus(null);
+        }}
+        onConfirm={async (modalData) => {
+          if (pendingBulkStatus) {
+            await performBulkStatusChange(pendingBulkStatus, modalData);
+          }
+        }}
+        status={pendingBulkStatus || "BUSY"}
       />
     </div>
   );
