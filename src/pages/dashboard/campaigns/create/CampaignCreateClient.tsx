@@ -217,28 +217,41 @@ export default function CampaignCreateClient({ data }: { data?: CampaignData | n
   const buildPayload = () => {
     const body = new FormData();
     body.append("type", form.type);
-    body.append("title", JSON.stringify({ ar: form.titleAr, en: form.titleEn }));
 
-    if (form.descriptionAr || form.descriptionEn || form.type === "NOTIFICATION") {
-      body.append("description", JSON.stringify({ ar: form.descriptionAr, en: form.descriptionEn }));
+    const trimmedTitleAr = form.titleAr.trim();
+    const trimmedTitleEn = form.titleEn.trim();
+    if (trimmedTitleAr || trimmedTitleEn || form.type === "NOTIFICATION") {
+      body.append(
+        "title",
+        JSON.stringify({
+          ar: trimmedTitleAr || trimmedTitleEn,
+          en: trimmedTitleEn || trimmedTitleAr,
+        })
+      );
     }
 
-    if (form.incentiveType === "freeDelivery") {
-      const freeDeliveryText = { ar: "توصيل مجاني", en: "Free delivery" };
-      body.append("featureText", JSON.stringify(freeDeliveryText));
-      body.append("valueText", JSON.stringify(freeDeliveryText));
-    } else if (form.incentiveType === "discount") {
-      const arVal = form.discountValueAr.trim().startsWith("خصم") 
-        ? form.discountValueAr.trim() 
-        : `خصم ${form.discountValueAr.trim()}`;
-        
-      const enVal = form.discountValueEn.trim().toLowerCase().endsWith("discount")
-        ? form.discountValueEn.trim()
-        : `${form.discountValueEn.trim()} discount`;
+    if (form.type === "NOTIFICATION") {
+      if (form.descriptionAr || form.descriptionEn) {
+        body.append("description", JSON.stringify({ ar: form.descriptionAr, en: form.descriptionEn }));
+      }
 
-      const discountText = { ar: arVal, en: enVal };
-      body.append("featureText", JSON.stringify(discountText));
-      body.append("valueText", JSON.stringify(discountText));
+      if (form.incentiveType === "freeDelivery") {
+        const freeDeliveryText = { ar: "توصيل مجاني", en: "Free delivery" };
+        body.append("featureText", JSON.stringify(freeDeliveryText));
+        body.append("valueText", JSON.stringify(freeDeliveryText));
+      } else if (form.incentiveType === "discount") {
+        const arVal = form.discountValueAr.trim().startsWith("خصم")
+          ? form.discountValueAr.trim()
+          : `خصم ${form.discountValueAr.trim()}`;
+
+        const enVal = form.discountValueEn.trim().toLowerCase().endsWith("discount")
+          ? form.discountValueEn.trim()
+          : `${form.discountValueEn.trim()} discount`;
+
+        const discountText = { ar: arVal, en: enVal };
+        body.append("featureText", JSON.stringify(discountText));
+        body.append("valueText", JSON.stringify(discountText));
+      }
     }
 
     if (form.image) body.append("image", form.image);
@@ -263,9 +276,9 @@ export default function CampaignCreateClient({ data }: { data?: CampaignData | n
   };
 
   const validate = () => {
-    if (!form.titleAr.trim() || !form.titleEn.trim()) return t("campaignTitleRequired");
+    if (!isOffer && (!form.titleAr.trim() || !form.titleEn.trim())) return t("campaignTitleRequired");
     if (requiresDescription && (!form.descriptionAr.trim() || !form.descriptionEn.trim())) return t("campaignDescriptionRequired");
-    if (form.incentiveType === "discount" && (!form.discountValueAr.trim() || !form.discountValueEn.trim())) return t("campaignDiscountValueRequired");
+    if (!isOffer && form.incentiveType === "discount" && (!form.discountValueAr.trim() || !form.discountValueEn.trim())) return t("campaignDiscountValueRequired");
     if (isOffer && !form.image && !data?.image) return t("campaignImageRequired");
     if (requiresStore && !form.storeId) return t("campaignStoreRequired");
     if (requiresService && !form.serviceId) return t("campaignServiceRequired");
@@ -387,42 +400,53 @@ export default function CampaignCreateClient({ data }: { data?: CampaignData | n
 
         <div className="grid gap-5 rounded-2xl border bg-muted/20 p-5">
           <h3 className="font-semibold">{t("campaignContent")}</h3>
+          {isOffer && (
+            <p className="text-xs text-muted-foreground">
+              {locale === "ar"
+                ? "البوب-أب يعرض الصورة فقط للعميل (مع زر «اطلب دلوقتي» إذا تم ربطه بمطعم أو منتج أو خدمة توصيل). العنوان بالأسفل اسم داخلي اختياري للأدمن فقط."
+                : "Popup offers show only the uploaded image to customers (plus an \"Order Now\" button when linked to a store, product, or driver). Title fields below are optional internal admin labels."}
+            </p>
+          )}
           <div className="grid gap-4 md:grid-cols-2">
             <div className="grid gap-2">
-              <Label>{t("titleAr")}</Label>
+              <Label>{t("titleAr")} {isOffer ? `(${t("optional")})` : ""}</Label>
               <Input value={form.titleAr} onChange={event => updateForm("titleAr", event.target.value)} placeholder={t("campaignTitlePlaceholder")} />
             </div>
             <div className="grid gap-2">
-              <Label>{t("titleEn")}</Label>
+              <Label>{t("titleEn")} {isOffer ? `(${t("optional")})` : ""}</Label>
               <Input value={form.titleEn} onChange={event => updateForm("titleEn", event.target.value)} placeholder={t("campaignTitlePlaceholder")} />
             </div>
-            <div className="grid gap-2">
-              <Label>{t("descriptionAr")} {requiresDescription ? "*" : `(${t("optional")})`}</Label>
-              <Textarea value={form.descriptionAr} onChange={event => updateForm("descriptionAr", event.target.value)} placeholder={t("campaignDescriptionPlaceholder")} />
-            </div>
-            <div className="grid gap-2">
-              <Label>{t("descriptionEn")} {requiresDescription ? "*" : `(${t("optional")})`}</Label>
-              <Textarea value={form.descriptionEn} onChange={event => updateForm("descriptionEn", event.target.value)} placeholder={t("campaignDescriptionPlaceholder")} />
-            </div>
-            <div className="grid gap-2">
-              <Label>{t("rewardType")}</Label>
-              <Select value={form.incentiveType} onValueChange={value => updateForm("incentiveType", value as IncentiveType)}>
-                <SelectTrigger><SelectValue placeholder={t("rewardType")} /></SelectTrigger>
-                <SelectContent>
-                  {incentiveTypes.map(type => <SelectItem key={type} value={type}>{t(`campaignIncentiveType.${type}`)}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            {form.incentiveType === "discount" && (
+            {!isOffer && (
               <>
                 <div className="grid gap-2">
-                  <Label>{t("valueAr")} *</Label>
-                  <Input value={form.discountValueAr} onChange={event => updateForm("discountValueAr", event.target.value)} placeholder={t("campaignValuePlaceholder")} />
+                  <Label>{t("descriptionAr")} {requiresDescription ? "*" : `(${t("optional")})`}</Label>
+                  <Textarea value={form.descriptionAr} onChange={event => updateForm("descriptionAr", event.target.value)} placeholder={t("campaignDescriptionPlaceholder")} />
                 </div>
                 <div className="grid gap-2">
-                  <Label>{t("valueEn")} *</Label>
-                  <Input value={form.discountValueEn} onChange={event => updateForm("discountValueEn", event.target.value)} placeholder={t("campaignValuePlaceholder")} />
+                  <Label>{t("descriptionEn")} {requiresDescription ? "*" : `(${t("optional")})`}</Label>
+                  <Textarea value={form.descriptionEn} onChange={event => updateForm("descriptionEn", event.target.value)} placeholder={t("campaignDescriptionPlaceholder")} />
                 </div>
+                <div className="grid gap-2">
+                  <Label>{t("rewardType")}</Label>
+                  <Select value={form.incentiveType} onValueChange={value => updateForm("incentiveType", value as IncentiveType)}>
+                    <SelectTrigger><SelectValue placeholder={t("rewardType")} /></SelectTrigger>
+                    <SelectContent>
+                      {incentiveTypes.map(type => <SelectItem key={type} value={type}>{t(`campaignIncentiveType.${type}`)}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {form.incentiveType === "discount" && (
+                  <>
+                    <div className="grid gap-2">
+                      <Label>{t("valueAr")} *</Label>
+                      <Input value={form.discountValueAr} onChange={event => updateForm("discountValueAr", event.target.value)} placeholder={t("campaignValuePlaceholder")} />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>{t("valueEn")} *</Label>
+                      <Input value={form.discountValueEn} onChange={event => updateForm("discountValueEn", event.target.value)} placeholder={t("campaignValuePlaceholder")} />
+                    </div>
+                  </>
+                )}
               </>
             )}
             {(isOffer || form.type === "NOTIFICATION") && (
