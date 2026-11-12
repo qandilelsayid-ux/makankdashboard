@@ -11,6 +11,7 @@ import { noSchema } from "@/validations/String.schema";
     return z.object({
     nameAr:StringReq(t),
     nameEn:StringReq(t),
+cityId:selectNotReq(),
 storeId:selectNotReq(),
 customerCategoryId:selectNotReq(),
 targetType:noSchema(),

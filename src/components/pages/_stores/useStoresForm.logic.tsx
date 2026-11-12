@@ -51,8 +51,8 @@ export default function useStoresLogic({ data }: { data?: StoresType }) {
     (profile?.roleKey === "Admin" || profile?.Role?.roleKey === "Admin") &&
     (profile?.Role?.default === true || profile?.default === true);
 
-  const showServiceFee = isEdit && isSuperAdmin;
-  const inputs = StoresInputs({ isEdit, isAdmin, isSuperAdmin: showServiceFee, t });
+  const showServiceFee = false;
+  const inputs = StoresInputs({ isEdit, isAdmin, isSuperAdmin: false, t });
   const {
     control,
     formState: { errors },
@@ -124,7 +124,7 @@ export default function useStoresLogic({ data }: { data?: StoresType }) {
         }
       }
     }
-    const { map, userEmail, userPass, userPhone, UserName, templateId, ...rest } = formData as any;
+    const { map, userEmail, userPass, userPhone, UserName, templateId, serviceFee, serviceFeeType, ...rest } = formData as any;
 
     let formattedPhone = userPhone;
     if (formattedPhone) {
@@ -160,14 +160,6 @@ export default function useStoresLogic({ data }: { data?: StoresType }) {
         rest.deliveryTimeMaxMinutes !== undefined && rest.deliveryTimeMaxMinutes !== "" ? Number(rest.deliveryTimeMaxMinutes) : 0,
       minOrderAmount:
         rest.minOrderAmount !== undefined && rest.minOrderAmount !== "" ? Number(rest.minOrderAmount) : 0,
-      // Store service fee: sent only when the super admin edits a store (the fields
-      // are shown only then; POST /stores doesn't accept them). Blank = 0 = global fee.
-      serviceFee: showServiceFee
-        ? (rest.serviceFee !== undefined && rest.serviceFee !== "" ? Number(rest.serviceFee) : 0)
-        : undefined,
-      serviceFeeType: showServiceFee
-        ? (rest.serviceFeeType === "FIXED" ? "FIXED" : "PERCENTAGE")
-        : undefined,
       hasTableReservation: rest.hasTableReservation === "true" || rest.hasTableReservation === true,
       tableReservationFee:
         rest.tableReservationFee !== undefined && rest.tableReservationFee !== "" ? Number(rest.tableReservationFee) : 0,

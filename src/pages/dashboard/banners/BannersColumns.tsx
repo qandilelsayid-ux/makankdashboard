@@ -58,6 +58,25 @@ export default function BannersColumns(): ColumnDef<Record<string, unknown>>[] {
       }
     },
     {
+      id: "city",
+      header: () => <IconHeader columnKey="City" />,
+      cell: ({ row }) => {
+        const city = row.original.City as any;
+        const cityName = city?.name
+          ? typeof city.name === "object"
+            ? city.name.ar || city.name.en
+            : city.name
+          : null;
+        return cityName ? (
+          <span className="inline-flex items-center gap-1 rounded-full border border-sky-400/40 bg-sky-50 dark:bg-sky-950/20 px-2.5 py-0.5 text-xs font-medium text-sky-600 dark:text-sky-400">
+            📍 {cityName}
+          </span>
+        ) : (
+          <span className="text-muted-foreground text-xs">{t("All Cities") || "جميع المدن"}</span>
+        );
+      }
+    },
+    {
       accessorKey: "order",
       header: () => <IconHeader columnKey="Order" />,
       cell: ({ getValue }) => <span>{String(getValue() ?? "—")}</span>

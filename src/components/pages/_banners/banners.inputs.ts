@@ -64,6 +64,14 @@ export const BannersInputs = ({
       disabled: isSpecialDelivery || targetType !== "CUSTOMER_CATEGORY",
     },
     {
+      name: "cityId",
+      type: "selectPaginated",
+      apiUrl: ["cities"],
+      cardId: "targeting",
+      width: 3,
+      label: tr("City", "المدينة")
+    },
+    {
       name: "storeId",
       type: "selectPaginated",
       apiUrl: ['stores'],

@@ -7,6 +7,7 @@ export const SpecialDeliveryBannersSchema = (t: TFunction) => {
   return z.object({
     nameAr: StringReq(t),
     nameEn: StringReq(t),
+    cityId: selectNotReq(),
     storeId: selectNotReq(),
     customerCategoryId: selectNotReq(),
     targetType: noSchema(),

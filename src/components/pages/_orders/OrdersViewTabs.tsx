@@ -6,7 +6,8 @@ import { useState } from "react";
 import BulkAssignOrdersAction from "./BulkAssignOrdersAction";
 import SingleOrderDeleteAction from "./SingleOrderDeleteAction";
 import { useApiQuery } from "@/hooks/useApiQuery";
-import { useSearchParams } from "@/lib/navigation";
+import { useSearchParams, usePathname } from "@/lib/navigation";
+import { useNavigate } from "react-router-dom";
 
 type OrdersViewTabsProps = {
   tableTitle: string;
@@ -75,6 +76,8 @@ export default function OrdersViewTabs({
 }: OrdersViewTabsProps) {
   const t = useTranslations();
   const searchParams = useSearchParams();
+  const navigate = useNavigate();
+  const pathname = usePathname();
   const columns = OrdersColumns();
   const resolvedFilters = filters ?? getDefaultFilters(t);
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
@@ -93,6 +96,27 @@ export default function OrdersViewTabs({
 
   const queryKey = [endPoint.join("/"), JSON.stringify(params)];
   const { data: response } = useApiQuery({ queryKey, endPoint, params, staleTime: 0 });
+
+  // Fetch active cities to display dynamic city selector boxes/tabs
+  const { data: citiesResponse } = useApiQuery({
+    queryKey: ["orders-active-cities-tabs"],
+    endPoint: ["cities"],
+    params: { limit: 50, active: true },
+    staleTime: 60000
+  });
+  const cities: Record<string, any>[] = Array.isArray(citiesResponse?.data) ? citiesResponse.data : [];
+  const currentCityId = params.cityId ? String(params.cityId) : "";
+
+  const handleSelectCity = (cityId?: number | string) => {
+    const nextParams = new URLSearchParams(searchParams.toString());
+    if (cityId) {
+      nextParams.set("cityId", String(cityId));
+    } else {
+      nextParams.delete("cityId");
+    }
+    nextParams.set("page", "1");
+    navigate(`${pathname}?${nextParams.toString()}`);
+  };
 
   const orders: Record<string, unknown>[] = Array.isArray(response?.data) ? response.data : [];
   const total = response?.total ?? orders.length;
@@ -120,6 +144,49 @@ export default function OrdersViewTabs({
         selectedOrderIds={selectedOrderIds}
         onClearSelection={() => setSelectedOrderIds([])}
       />
+
+      {cities.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 p-2 bg-card rounded-xl border border-border shadow-sm">
+          <div className="text-xs font-semibold text-muted-foreground px-2 flex items-center gap-1.5">
+            <span>🏙️</span>
+            <span>{t("City") || "المدينة"}:</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => handleSelectCity()}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              !currentCityId
+                ? "bg-primary text-primary-foreground shadow-sm font-semibold"
+                : "bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted border border-border/40"
+            }`}
+          >
+            {t("All Cities") || "جميع المدن"}
+          </button>
+          {cities.map((city) => {
+            const isSelected = String(city.id) === currentCityId;
+            const cityName =
+              typeof city.name === "object"
+                ? city.name?.ar || city.name?.en || ""
+                : String(city.name || "");
+            return (
+              <button
+                key={city.id}
+                type="button"
+                onClick={() => handleSelectCity(city.id)}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                  isSelected
+                    ? "bg-primary text-primary-foreground shadow-sm font-semibold"
+                    : "bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted border border-border/40"
+                }`}
+              >
+                <span>📍</span>
+                <span>{cityName}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       <TableBasic
         data={orders}
         hideCreateNew

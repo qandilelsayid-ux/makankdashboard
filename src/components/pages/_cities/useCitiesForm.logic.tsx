@@ -19,11 +19,13 @@ export default function useCitiesLogic({ data }: { data?: CitiesType }) {
   const defaultValues = extractFormDefaultInputs(inputs, data) as any;
   if (data) {
     defaultValues.active = (data as any).active !== false ? ["true"] : [];
+    defaultValues.customDeliveryActive = (data as any).customDeliveryActive !== false ? ["true"] : [];
     defaultValues.coordinates = (data as any).coordinates ?? [];
     defaultValues.radius = (data as any).radius ?? "";
     defaultValues.toleranceRadius = (data as any).toleranceRadius ?? "";
   } else {
     defaultValues.active = ["true"];
+    defaultValues.customDeliveryActive = ["true"];
     defaultValues.coordinates = [];
   }
 
@@ -45,6 +47,7 @@ export default function useCitiesLogic({ data }: { data?: CitiesType }) {
 
     const payload = extractFormNameInputs({ inputs, data: formData }) as any;
     payload.active = Array.isArray(formData.active) && formData.active.includes("true");
+    payload.customDeliveryActive = Array.isArray((formData as any).customDeliveryActive) && (formData as any).customDeliveryActive.includes("true");
     
     // Automatically calculate centroid lat/lng from coordinates as center fallback
     if (formData.coordinates && formData.coordinates.length > 0) {

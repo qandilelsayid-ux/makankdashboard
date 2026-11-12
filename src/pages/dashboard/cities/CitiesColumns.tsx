@@ -35,6 +35,26 @@ export default function CitiesColumns(): ColumnDef<Record<string, unknown>>[] {
           </div>
         );
       }
+    },
+    {
+      accessorKey: "customDeliveryActive",
+      header: () => <IconHeader key="customDeliveryActive" columnKey="customDeliveryActive" />,
+      cell: ({ row }) => {
+        const id = String(row.original.id);
+        const customDeliveryActive = String(row.original.customDeliveryActive ?? "true");
+        return (
+          <div className="flex justify-center">
+            <ChangeStatusTableAction
+              id={id}
+              status={customDeliveryActive}
+              options={["true", "false"]}
+              endpoint={["cities"]}
+              statusKey="customDeliveryActive"
+              type="switch"
+            />
+          </div>
+        );
+      }
     }
   ];
 

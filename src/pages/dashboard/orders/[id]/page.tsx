@@ -148,6 +148,22 @@ async function page({ params }: { params: Params }): Promise<JSX.Element> {
                 {t((data as any)?.customDeliveryKind) || (data as any)?.customDeliveryKind}
               </Badge>
             )}
+            {(() => {
+              const cityName = getLocalizedName(
+                (data as any)?.Zone?.City?.name ||
+                (data as any)?.CustomerSelectedZone?.City?.name ||
+                (data as any)?.Branch?.Store?.city?.name ||
+                (data as any)?.Branch?.Store?.City?.name ||
+                (data as any)?.invoice?.store?.city?.name ||
+                (data as any)?.Stations?.[0]?.Zone?.City?.name
+              );
+              return cityName ? (
+                <Badge variant="outline" className="gap-1 border-primary/40 text-primary font-medium">
+                  <span>📍</span>
+                  <span>{cityName}</span>
+                </Badge>
+              ) : null;
+            })()}
           </div>
           <OrderStatusSelect orderId={data?.id} status={data?.status} />
         </div>
@@ -533,6 +549,25 @@ async function page({ params }: { params: Params }): Promise<JSX.Element> {
                   {t(data?.type) || data?.type}
                 </Badge>
               </div>
+              {(() => {
+                const cityName = getLocalizedName(
+                  (data as any)?.Zone?.City?.name ||
+                  (data as any)?.CustomerSelectedZone?.City?.name ||
+                  (data as any)?.Branch?.Store?.city?.name ||
+                  (data as any)?.Branch?.Store?.City?.name ||
+                  (data as any)?.invoice?.store?.city?.name ||
+                  (data as any)?.Stations?.[0]?.Zone?.City?.name
+                );
+                return cityName ? (
+                  <div>
+                    <span className="text-muted-foreground block text-xs mb-0.5">{t("City") || "المدينة"}</span>
+                    <Badge variant="outline" className="gap-1 border-primary/40 text-primary font-medium mt-0.5">
+                      <span>📍</span>
+                      <span>{cityName}</span>
+                    </Badge>
+                  </div>
+                ) : null;
+              })()}
               {/* Delivery kind — shown for all orders that have a driver */}
               {data?.Delivery?.User && (
                 <div>

@@ -221,6 +221,29 @@ export default function OrdersColumns(): any {
       }
     },
     {
+      id: "city",
+      header: () => <IconHeader columnKey="City" />,
+      cell: ({ row }) => {
+        const order = row?.original;
+        const cityName = getLocalizedName(
+          order?.Zone?.City?.name ||
+          order?.CustomerSelectedZone?.City?.name ||
+          order?.Branch?.Store?.city?.name ||
+          order?.Branch?.Store?.City?.name ||
+          order?.invoice?.store?.city?.name ||
+          order?.Stations?.[0]?.Zone?.City?.name
+        );
+        return cityName ? (
+          <Badge variant="outline" className="gap-1 border-primary/40 text-primary font-medium">
+            <span>📍</span>
+            <span>{cityName}</span>
+          </Badge>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        );
+      }
+    },
+    {
       accessorKey: "type",
       header: () => <IconHeader columnKey="Order Type" />,
       cell: ({ getValue }) => {

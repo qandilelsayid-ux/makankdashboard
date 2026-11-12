@@ -20,21 +20,6 @@ export const StoresInputs = ({ isEdit, isAdmin, isSuperAdmin, t }: {
     { name: "deliveryTimeMinMinutes", type: "number", cardId: 'operations', width: 3, min: 0 },
     { name: "deliveryTimeMaxMinutes", type: "number", cardId: 'operations', width: 3, min: 0 },
     { name: "minOrderAmount", type: "number", cardId: 'operations', width: 3, min: 0 },
-    ...(isSuperAdmin ? [
-      {
-        name: "serviceFeeType", type: "select" as const, cardId: 'operations', width: 3,
-        options: [
-          { label: t ? t("storeServiceFeePercentage") : "PERCENTAGE", value: "PERCENTAGE" },
-          { label: t ? t("storeServiceFeeFixed") : "FIXED", value: "FIXED" }
-        ],
-        toolTip: t ? t("storeServiceFeeTooltip") : undefined
-      },
-      {
-        name: "serviceFee", type: "number" as const, cardId: 'operations', width: 3, min: 0,
-        placeholder: t ? t("storeServiceFeePlaceholder") : "0",
-        toolTip: t ? t("storeServiceFeeTooltip") : undefined
-      },
-    ] : []),
     {
       name: "hasTableReservation",
       type: "select" as const,

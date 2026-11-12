@@ -46,6 +46,9 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
+import { APIChangeStatus } from "@/api/global/ApiChangeStatus";
+import { queryClient } from "@/lib/queryClient";
 
 interface CustomZoneItem {
   zoneId: number;
@@ -456,13 +459,48 @@ export default function CustomDeliveryZonePricingTab({ scope = "custom" }: { sco
         </div>
 
         {/* Status Count Badges */}
-        <div className="flex items-center gap-2 text-xs">
+        <div className="flex flex-wrap items-center gap-3 text-xs">
           <Badge variant="outline" className="border-green-600/30 text-green-700 bg-green-50/50">
             {locale === "ar" ? `تسعيرة مخصصة: ${customPricedCount}` : `Custom: ${customPricedCount}`}
           </Badge>
           <Badge variant="outline" className="border-muted-foreground/30 text-muted-foreground">
             {locale === "ar" ? `بالسعر الافتراضي: ${defaultPricedCount}` : `Default: ${defaultPricedCount}`}
           </Badge>
+
+          {selectedCityId !== "all" && (() => {
+            const selectedCity = citiesList.find((c: any) => String(c.id) === selectedCityId);
+            if (!selectedCity) return null;
+            const isCustomDeliveryOpen = selectedCity.customDeliveryActive !== false;
+            return (
+              <div className="flex items-center gap-2 px-3 py-1 rounded-md border bg-muted/40 text-xs">
+                <span className="font-medium text-foreground">
+                  {locale === "ar" ? "المندوب الخاص للمدينة:" : "City Custom Delivery:"}
+                </span>
+                <span className={isCustomDeliveryOpen ? "text-green-600 font-semibold" : "text-destructive font-semibold"}>
+                  {isCustomDeliveryOpen ? (locale === "ar" ? "مفتوح" : "Open") : (locale === "ar" ? "مغلق" : "Closed")}
+                </span>
+                <Switch
+                  checked={isCustomDeliveryOpen}
+                  onCheckedChange={async (checked) => {
+                    try {
+                      await APIChangeStatus(["cities"], "", String(selectedCity.id), {
+                        customDeliveryActive: checked,
+                      });
+                      toast.success(
+                        locale === "ar"
+                          ? `تم ${checked ? "فتح" : "إغلاق"} خدمة المندوب الخاص لـ ${selectedCity.name?.ar || selectedCity.name?.en}`
+                          : `Custom delivery ${checked ? "opened" : "closed"} for city`
+                      );
+                      queryClient.invalidateQueries({ queryKey: ["cities"] });
+                      queryClient.invalidateQueries({ queryKey: ["cities-zones-filter"] });
+                    } catch (err: any) {
+                      toast.error(err?.message || "Error");
+                    }
+                  }}
+                />
+              </div>
+            );
+          })()}
         </div>
       </div>
 

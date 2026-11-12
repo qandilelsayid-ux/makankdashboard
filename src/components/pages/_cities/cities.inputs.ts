@@ -20,6 +20,15 @@ export const CitiesInputs = (t?: any) => {
       options: [{ label: tr("Active", "نشط"), value: "true" }]
     },
     {
+      name: "customDeliveryActive",
+      type: "checkbox",
+      cardId: 'lang',
+      width: 6,
+      label: "",
+      inputClassName: "button-checkbox",
+      options: [{ label: tr("customDeliveryActive", "خدمة المندوب الخاص مفعلة"), value: "true" }]
+    },
+    {
       name: "radius",
       type: "number",
       cardId: 'lang',
