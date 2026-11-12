@@ -31,7 +31,7 @@ export const routeResultCache = new Map();
 
 function LoadingRoute() {
   const location = useLocation();
-  const isDashboardRoute = /^\/(?:ar|en)\/(dashboard|logs|stores|orders|zones|branches|services|category|coupons|offers|banners|special-delivery-banners|modules|schedule|users|employees|customers|roles|permissions|fund|transactions|withdraw|complaint|socialMedia|rating|delivery|settings|profile|customer-categories|store-templates|analytics|notifications|partner-settlements|loyalty|table-reservations|service-schedules)(?:\/|$)/.test(location.pathname);
+  const isDashboardRoute = /^\/(?:ar|en)\/(dashboard|logs|stores|orders|zones|branches|services|category|coupons|offers|banners|home-builder|special-delivery-banners|modules|schedule|users|employees|customers|roles|permissions|fund|transactions|withdraw|complaint|socialMedia|rating|delivery|settings|profile|customer-categories|store-templates|analytics|notifications|partner-settlements|loyalty|table-reservations|service-schedules)(?:\/|$)/.test(location.pathname);
 
   if (isDashboardRoute) {
     return <DashboardLoading />;

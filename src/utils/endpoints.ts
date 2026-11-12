@@ -163,6 +163,10 @@ export const endpoints = {
   tableReservationsAdmin: "/admin",
   tableReservationsPendingCount: "/admin/pending-count",
   serviceSchedules: "/api/service-schedules",
+  homeLayout: "/api/home/layout",
+  homeAdminSections: "/api/home/admin/sections",
+  homeAdminReorder: "/api/home/admin/sections/reorder",
+  homeAdminUpload: "/api/home/admin/upload",
 };
 // addresses
 // allPermissions

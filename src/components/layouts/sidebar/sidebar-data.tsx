@@ -68,6 +68,10 @@ export const links = ({ permissions, pendingReservationsCount }: { permissions: 
         title: "content",
         items: [
           (permissions?.Banners?.get || permissions?.banners?.get) && {
+            title: "homeBuilder",
+            url: "/home-builder"
+          },
+          (permissions?.Banners?.get || permissions?.banners?.get) && {
             title: "banners",
             url: "/banners"
           },
