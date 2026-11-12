@@ -191,7 +191,7 @@ export default function MapPointerInput({
   };
 
   const tileUrl = useMemo(() => {
-    const light = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+    const light = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
     const dark = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
     return isDark ? dark : light;
   }, [isDark]);
