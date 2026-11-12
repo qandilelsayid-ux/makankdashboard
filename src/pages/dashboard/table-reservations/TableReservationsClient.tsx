@@ -39,6 +39,7 @@ import {
   RefreshCw,
   Search,
   Store,
+  Phone,
   User,
   Users,
   UtensilsCrossed,

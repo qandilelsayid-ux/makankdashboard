@@ -184,6 +184,10 @@ export const links = ({ permissions, pendingReservationsCount }: { permissions: 
               </span>
             ) : undefined
           },
+          (permissions?.Orders?.get || permissions?.orders?.get) && {
+            title: "governorateShipping",
+            url: "/governorate-shipping"
+          },
           (permissions?.Complaints?.get || permissions?.complaints?.get) && {
             title: "complaint",
             url: "/complaint"
