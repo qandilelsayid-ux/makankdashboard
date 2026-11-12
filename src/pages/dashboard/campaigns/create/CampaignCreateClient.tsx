@@ -163,6 +163,10 @@ export default function CampaignCreateClient({ data }: { data?: CampaignData | n
   const requiresDescription = form.type === "NOTIFICATION";
   const requiresStore = form.targetType === "STORE" || form.targetType === "SERVICE";
   const requiresService = form.targetType === "SERVICE";
+  const canPickStore = requiresStore || (isOffer && form.targetType !== "SPECIAL_DRIVER");
+  const canPickService =
+    requiresService ||
+    (isOffer && form.targetType !== "SPECIAL_DRIVER" && Boolean(form.storeId));
   const requiresUsers = form.targetType === "SELECTED_USERS";
 
   const storesApiUrl = useMemo<endpointType>(() => ["stores"], []);
@@ -192,14 +196,29 @@ export default function CampaignCreateClient({ data }: { data?: CampaignData | n
   };
 
   const handleTargetChange = (targetType: CampaignTargetType) => {
-    setForm(prev => ({
-      ...prev,
-      targetType,
-      storeId: targetType === "STORE" || targetType === "SERVICE" ? prev.storeId : "",
-      serviceId: targetType === "SERVICE" ? prev.serviceId : "",
-      targetUserIds: targetType === "SELECTED_USERS" ? prev.targetUserIds : [],
-      deliveryId: targetType === "SPECIAL_DRIVER" ? prev.deliveryId : ""
-    }));
+    setForm(prev => {
+      const keepOfferDestination =
+        prev.type === "OFFER" &&
+        targetType !== "SPECIAL_DRIVER" &&
+        targetType !== "DELIVERY";
+      return {
+        ...prev,
+        targetType,
+        storeId:
+          targetType === "STORE" ||
+          targetType === "SERVICE" ||
+          keepOfferDestination
+            ? prev.storeId
+            : "",
+        serviceId:
+          targetType === "SERVICE" || keepOfferDestination
+            ? prev.serviceId
+            : "",
+        targetUserIds:
+          targetType === "SELECTED_USERS" ? prev.targetUserIds : [],
+        deliveryId: targetType === "SPECIAL_DRIVER" ? prev.deliveryId : ""
+      };
+    });
   };
 
   const handleClickTargetChange = (type: string) => {
@@ -264,8 +283,8 @@ export default function CampaignCreateClient({ data }: { data?: CampaignData | n
       }
     }
 
-    if (requiresStore) body.append("storeId", form.storeId);
-    if (requiresService) body.append("serviceId", form.serviceId);
+    if (canPickStore && form.storeId) body.append("storeId", form.storeId);
+    if (canPickService && form.serviceId) body.append("serviceId", form.serviceId);
     if (form.targetType === "SPECIAL_DRIVER" && form.deliveryId) body.append("deliveryId", form.deliveryId);
 
     if (form.startAt) body.append("startAt", toIsoDate(form.startAt));
@@ -510,8 +529,14 @@ export default function CampaignCreateClient({ data }: { data?: CampaignData | n
                   apiUrl={storesApiUrl}
                   searchTermKey="name"
                   value={form.storeId}
-                  disabled={!requiresStore}
-                  onChange={value => updateForm("storeId", value ? String(value) : "")}
+                  disabled={!canPickStore}
+                  onChange={value =>
+                    setForm(prev => ({
+                      ...prev,
+                      storeId: value ? String(value) : "",
+                      serviceId: ""
+                    }))
+                  }
                   placeholder={t("store")}
                 />
               </div>
@@ -524,7 +549,7 @@ export default function CampaignCreateClient({ data }: { data?: CampaignData | n
                   name="serviceId"
                   apiUrl={servicesApiUrl}
                   value={form.serviceId}
-                  disabled={!requiresService || !form.storeId}
+                  disabled={!canPickService}
                   searchFilters={serviceSearchFilters}
                   labelFormat="serviceStore"
                   onChange={value => updateForm("serviceId", value ? String(value) : "")}
