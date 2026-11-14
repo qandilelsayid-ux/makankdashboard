@@ -24,12 +24,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Clock,
   Edit2,
-  ExternalLink,
   FolderPlus,
+  Image as ImageIcon,
   Layers,
+  Package,
   Plus,
   RefreshCw,
+  Search,
   Store,
+  Tag,
   Trash2,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -38,7 +41,7 @@ import { toast } from "sonner";
 export default function KioskClient() {
   const queryClient = useQueryClient();
   const [selectedCityId, setSelectedCityId] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<"store" | "categories">("categories");
+  const [activeTab, setActiveTab] = useState<"store" | "categories" | "products" | "banners">("categories");
 
   // Category Dialog State
   const [isCatDialogOpen, setIsCatDialogOpen] = useState(false);
@@ -48,6 +51,28 @@ export default function KioskClient() {
   const [catNameEn, setCatNameEn] = useState("");
   const [catImage, setCatImage] = useState("");
   const [catOrder, setCatOrder] = useState("0");
+
+  // Product Dialog State
+  const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [prodNameAr, setProdNameAr] = useState("");
+  const [prodNameEn, setProdNameEn] = useState("");
+  const [prodDescAr, setProdDescAr] = useState("");
+  const [prodDescEn, setProdDescEn] = useState("");
+  const [prodImage, setProdImage] = useState("");
+  const [prodPrice, setProdPrice] = useState("");
+  const [prodDiscountPrice, setProdDiscountPrice] = useState("");
+  const [prodCategoryId, setProdCategoryId] = useState("");
+  const [prodAvailable, setProdAvailable] = useState(true);
+  const [productSearch, setProductSearch] = useState("");
+  const [productCategoryFilter, setProductCategoryFilter] = useState("ALL");
+
+  // Banner Dialog State
+  const [isBannerDialogOpen, setIsBannerDialogOpen] = useState(false);
+  const [bannerNameAr, setBannerNameAr] = useState("");
+  const [bannerNameEn, setBannerNameEn] = useState("");
+  const [bannerImage, setBannerImage] = useState("");
+  const [bannerCategoryId, setBannerCategoryId] = useState("");
 
   // Kiosk Store Form State
   const [kioskNameAr, setKioskNameAr] = useState("كشك مكانك");
@@ -136,6 +161,55 @@ export default function KioskClient() {
     ? categoriesResponse.data
     : [];
 
+  // Flat list of all categories and subcategories for select dropdowns
+  const allSelectableCategories: { id: number; name: string }[] = [];
+  categories.forEach((cat) => {
+    const mainName = cat.name?.ar || cat.name?.en || `فئة #${cat.id}`;
+    allSelectableCategories.push({ id: cat.id, name: `[رئيسية] ${mainName}` });
+    if (Array.isArray(cat.Children)) {
+      cat.Children.forEach((sub: any) => {
+        const subName = sub.name?.ar || sub.name?.en || `فرعية #${sub.id}`;
+        allSelectableCategories.push({ id: sub.id, name: ` └─ ${subName}` });
+      });
+    }
+  });
+
+  // 4. Fetch Kiosk Products
+  const {
+    data: productsResponse,
+    isLoading: isProductsLoading,
+    refetch: refetchProducts,
+  } = useQuery({
+    queryKey: ["kiosk-admin-products", currentKiosk?.id],
+    queryFn: () =>
+      fetchHelper({
+        endPoint: `kiosk/admin/products/${currentKiosk.id}` as any,
+      }),
+    enabled: !!currentKiosk?.id && activeTab === "products",
+  });
+
+  const products: any[] = Array.isArray(productsResponse?.data)
+    ? productsResponse.data
+    : [];
+
+  // 5. Fetch Kiosk Banners
+  const {
+    data: bannersResponse,
+    isLoading: isBannersLoading,
+    refetch: refetchBanners,
+  } = useQuery({
+    queryKey: ["kiosk-admin-banners", currentKiosk?.id],
+    queryFn: () =>
+      fetchHelper({
+        endPoint: `kiosk/admin/banners/${currentKiosk.id}` as any,
+      }),
+    enabled: !!currentKiosk?.id && activeTab === "banners",
+  });
+
+  const banners: any[] = Array.isArray(bannersResponse?.data)
+    ? bannersResponse.data
+    : [];
+
   // ─── Mutations ─────────────────────────────────────────────────────────────
 
   // Save Kiosk Store
@@ -198,6 +272,93 @@ export default function KioskClient() {
     },
   });
 
+  // Save Product
+  const saveProductMutation = useMutation({
+    mutationFn: (body: any) => {
+      if (editingProduct) {
+        return fetchHelper({
+          endPoint: `kiosk/admin/product/${editingProduct.id}` as any,
+          method: "PATCH",
+          body,
+        });
+      }
+      return fetchHelper({
+        endPoint: "kiosk/admin/product" as any,
+        method: "POST",
+        body,
+      });
+    },
+    onSuccess: (res) => {
+      if (res.success) {
+        toast.success(editingProduct ? "تم تحديث المنتج بنجاح!" : "تمت إضافة المنتج بنجاح!");
+        setIsProductDialogOpen(false);
+        resetProductForm();
+        refetchProducts();
+      } else {
+        toast.error(res.message || "حدث خطأ في حفظ المنتج");
+      }
+    },
+  });
+
+  // Toggle Product Availability
+  const toggleProductMutation = useMutation({
+    mutationFn: (id: number) =>
+      fetchHelper({
+        endPoint: `kiosk/admin/product/${id}/toggle` as any,
+        method: "PATCH",
+      }),
+    onSuccess: () => {
+      toast.success("تم تحديث حالة توفر المنتج");
+      refetchProducts();
+    },
+  });
+
+  // Delete Product
+  const deleteProductMutation = useMutation({
+    mutationFn: (id: number) =>
+      fetchHelper({
+        endPoint: `kiosk/admin/product/${id}` as any,
+        method: "DELETE",
+      }),
+    onSuccess: () => {
+      toast.success("تم حذف المنتج بنجاح");
+      refetchProducts();
+    },
+  });
+
+  // Save Banner
+  const saveBannerMutation = useMutation({
+    mutationFn: (body: any) =>
+      fetchHelper({
+        endPoint: "kiosk/admin/banner" as any,
+        method: "POST",
+        body,
+      }),
+    onSuccess: (res) => {
+      if (res.success) {
+        toast.success("تمت إضافة البانر بنجاح!");
+        setIsBannerDialogOpen(false);
+        resetBannerForm();
+        refetchBanners();
+      } else {
+        toast.error(res.message || "حدث خطأ");
+      }
+    },
+  });
+
+  // Delete Banner
+  const deleteBannerMutation = useMutation({
+    mutationFn: (id: number) =>
+      fetchHelper({
+        endPoint: `kiosk/admin/banner/${id}` as any,
+        method: "DELETE",
+      }),
+    onSuccess: () => {
+      toast.success("تم حذف البانر بنجاح");
+      refetchBanners();
+    },
+  });
+
   // ─── Handlers ──────────────────────────────────────────────────────────────
 
   const handleSaveKiosk = (e: React.FormEvent) => {
@@ -253,75 +414,206 @@ export default function KioskClient() {
   const handleSaveCategory = (e: React.FormEvent) => {
     e.preventDefault();
     if (!catNameAr.trim()) {
-      toast.error("يرجى إدخال اسم الفئة بالعربية");
+      toast.error("يرجى كتابة اسم الفئة بالعربية");
       return;
     }
     if (!currentKiosk?.id) {
-      toast.error("يرجى إنشاء وحفظ إعدادات الكشك لهذه المدينة أولاً");
+      toast.error("يجب حفظ الكشك أولاً قبل إضافة فئات له");
       return;
     }
 
     saveCategoryMutation.mutate({
+      storeId: currentKiosk.id,
       name: { ar: catNameAr, en: catNameEn || catNameAr },
       image: catImage || undefined,
       order: Number(catOrder) || 0,
-      storeId: currentKiosk.id,
       parentId: parentCategoryIdForSub || undefined,
     });
   };
 
+  const openAddProduct = () => {
+    resetProductForm();
+    if (allSelectableCategories.length > 0) {
+      setProdCategoryId(String(allSelectableCategories[0].id));
+    }
+    setIsProductDialogOpen(true);
+  };
+
+  const openEditProduct = (prod: any) => {
+    setEditingProduct(prod);
+    const name = typeof prod.name === "object" ? prod.name : {};
+    const desc = typeof prod.description === "object" ? prod.description : {};
+    setProdNameAr(name.ar || "");
+    setProdNameEn(name.en || "");
+    setProdDescAr(desc.ar || "");
+    setProdDescEn(desc.en || "");
+    setProdImage(prod.image || "");
+    setProdPrice(String(prod.price || ""));
+    setProdDiscountPrice(prod.priceAfterDiscount ? String(prod.priceAfterDiscount) : "");
+    setProdCategoryId(String(prod.categoryId || ""));
+    setProdAvailable(prod.available ?? true);
+    setIsProductDialogOpen(true);
+  };
+
+  const resetProductForm = () => {
+    setEditingProduct(null);
+    setProdNameAr("");
+    setProdNameEn("");
+    setProdDescAr("");
+    setProdDescEn("");
+    setProdImage("");
+    setProdPrice("");
+    setProdDiscountPrice("");
+    setProdCategoryId("");
+    setProdAvailable(true);
+  };
+
+  const handleSaveProduct = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!prodNameAr.trim() || !prodPrice || !prodCategoryId) {
+      toast.error("يرجى إكمال الحقول الأساسية (الاسم، السعر، الفئة)");
+      return;
+    }
+
+    saveProductMutation.mutate({
+      storeId: currentKiosk.id,
+      categoryId: Number(prodCategoryId),
+      name: { ar: prodNameAr, en: prodNameEn || prodNameAr },
+      description: { ar: prodDescAr, en: prodDescEn },
+      image: prodImage || "uploads/product-default.png",
+      price: Number(prodPrice),
+      priceAfterDiscount: prodDiscountPrice ? Number(prodDiscountPrice) : undefined,
+      available: prodAvailable,
+    });
+  };
+
+  const resetBannerForm = () => {
+    setBannerNameAr("");
+    setBannerNameEn("");
+    setBannerImage("");
+    setBannerCategoryId("");
+  };
+
+  const handleSaveBanner = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bannerNameAr.trim() || !bannerImage.trim()) {
+      toast.error("يرجى كتابة عنوان البانر ورابط الصورة");
+      return;
+    }
+
+    saveBannerMutation.mutate({
+      storeId: currentKiosk.id,
+      name: { ar: bannerNameAr, en: bannerNameEn || bannerNameAr },
+      image: bannerImage,
+      categoryId: bannerCategoryId ? Number(bannerCategoryId) : undefined,
+    });
+  };
+
+  // Filtered Products
+  const filteredProducts = products.filter((p) => {
+    const nameAr = p.name?.ar || "";
+    const nameEn = p.name?.en || "";
+    const matchesSearch =
+      nameAr.toLowerCase().includes(productSearch.toLowerCase()) ||
+      nameEn.toLowerCase().includes(productSearch.toLowerCase());
+
+    const matchesCat =
+      productCategoryFilter === "ALL" ||
+      String(p.categoryId) === productCategoryFilter;
+
+    return matchesSearch && matchesCat;
+  });
+
   return (
-    <div className="space-y-6">
-      {/* ── Top Bar: City Selector & Navigation Tabs ── */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">
-            اختر المدينة:
-          </span>
+    <div className="space-y-6 p-4 md:p-6" dir="rtl">
+      {/* ── HEADER ── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-2xl font-bold">
+            🏪
+          </div>
+          <div>
+            <h1 className="text-xl md:text-2xl font-black text-gray-900 dark:text-gray-100 flex items-center gap-2">
+              <span>إدارة كشك مكانك</span>
+              <Badge variant="outline" className="border-primary text-primary font-bold">
+                تحكم شامل
+              </Badge>
+            </h1>
+            <p className="text-xs md:text-sm text-gray-500 mt-0.5">
+              تحكم كامل في التوقيتات، الصور، الفئات، التصنيفات الفرعية، المنتجات، والبانرز
+            </p>
+          </div>
+        </div>
+
+        {/* City Selector */}
+        <div className="flex items-center gap-2">
+          <label className="text-xs font-semibold whitespace-nowrap text-gray-700 dark:text-gray-300">
+            المدينة:
+          </label>
           <Select value={selectedCityId} onValueChange={setSelectedCityId}>
-            <SelectTrigger className="w-full md:w-[220px]">
-              <SelectValue placeholder="اختر المدينة..." />
+            <SelectTrigger className="w-[180px] bg-gray-50 dark:bg-gray-900 font-bold">
+              <SelectValue placeholder="اختر المدينة" />
             </SelectTrigger>
             <SelectContent>
               {cities.map((city) => (
                 <SelectItem key={city.id} value={String(city.id)}>
-                  {typeof city.name === "object" ? city.name.ar || city.name.en : city.name}
+                  {city.name?.ar || city.name?.en || city.name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
-
-        {/* Tab Switcher */}
-        <div className="flex items-center gap-2">
-          <Button
-            variant={activeTab === "categories" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setActiveTab("categories")}
-            className="flex items-center gap-2"
-          >
-            <Layers className="h-4 w-4" />
-            <span>الفئات والـ Sub-categories</span>
-          </Button>
-          <Button
-            variant={activeTab === "store" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setActiveTab("store")}
-            className="flex items-center gap-2"
-          >
-            <Store className="h-4 w-4" />
-            <span>إعدادات الكشك بالمدينة</span>
-          </Button>
-        </div>
       </div>
 
-      {/* ── TAB 1: KIOSK STORE SETUP ── */}
+      {/* ── NAVIGATION TABS ── */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        <Button
+          variant={activeTab === "categories" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setActiveTab("categories")}
+          className="flex items-center gap-2 rounded-xl"
+        >
+          <Layers className="h-4 w-4" />
+          <span>الفئات والـ Sub-categories ({categories.length})</span>
+        </Button>
+        <Button
+          variant={activeTab === "products" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setActiveTab("products")}
+          className="flex items-center gap-2 rounded-xl"
+        >
+          <Package className="h-4 w-4" />
+          <span>منتجات الكشك والأسعار</span>
+        </Button>
+        <Button
+          variant={activeTab === "banners" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setActiveTab("banners")}
+          className="flex items-center gap-2 rounded-xl"
+        >
+          <ImageIcon className="h-4 w-4" />
+          <span>بانرز وعروض الكشك</span>
+        </Button>
+        <Button
+          variant={activeTab === "store" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setActiveTab("store")}
+          className="flex items-center gap-2 rounded-xl"
+        >
+          <Store className="h-4 w-4" />
+          <span>إعدادات وتوقيتات الكشك</span>
+        </Button>
+      </div>
+
+      {/* ════════════════════════════════════════════════════════════════════════════
+          TAB 1: KIOSK STORE SETUP & TIMINGS
+      ════════════════════════════════════════════════════════════════════════════ */}
       {activeTab === "store" && (
         <Card className="border-gray-200 dark:border-gray-700">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Store className="h-5 w-5 text-primary" />
-              <span>بيانات كشك مكانك للمدينة المختارة</span>
+              <span>بيانات وتوقيتات كشك مكانك للمدينة المختارة</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -356,7 +648,7 @@ export default function KioskClient() {
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">رابط غلاف الكشك (Cover URL)</label>
+                  <label className="text-sm font-medium">رابط غلاف الكشك (Cover Banner URL)</label>
                   <Input
                     value={kioskCover}
                     onChange={(e) => setKioskCover(e.target.value)}
@@ -405,7 +697,7 @@ export default function KioskClient() {
                 <div>
                   <p className="font-semibold text-sm">حالة الكشك (مفعل / مغلق)</p>
                   <p className="text-xs text-gray-500">
-                    عند التعطيل، يظهر الكشك مغلقاً للعملاء في التطبيق
+                    عند التعطيل، يظهر الكشك مغلقاً للعملاء في التطبيق مع تنبيه
                   </p>
                 </div>
                 <Switch checked={isKioskActive} onCheckedChange={setIsKioskActive} />
@@ -416,17 +708,18 @@ export default function KioskClient() {
                 disabled={saveKioskMutation.isPending}
                 className="w-full md:w-auto mt-4"
               >
-                {saveKioskMutation.isPending ? "جاري الحفظ..." : "حفظ إعدادات الكشك"}
+                {saveKioskMutation.isPending ? "جاري الحفظ..." : "حفظ إعدادات وتوقيتات الكشك"}
               </Button>
             </form>
           </CardContent>
         </Card>
       )}
 
-      {/* ── TAB 2: KIOSK CATEGORIES & SUB-CATEGORIES ── */}
+      {/* ════════════════════════════════════════════════════════════════════════════
+          TAB 2: KIOSK CATEGORIES & SUB-CATEGORIES
+      ════════════════════════════════════════════════════════════════════════════ */}
       {activeTab === "categories" && (
         <div className="space-y-6">
-          {/* Action Bar */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
@@ -438,34 +731,15 @@ export default function KioskClient() {
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
-              {currentKiosk?.id && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  asChild
-                  className="flex items-center gap-2 text-xs"
-                >
-                  <a
-                    href={`/services?storeId=${currentKiosk.id}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    <span>إدارة منتجات الكشك</span>
-                  </a>
-                </Button>
-              )}
-              <Button
-                size="sm"
-                onClick={openAddMainCategory}
-                disabled={!currentKiosk?.id}
-                className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white"
-              >
-                <Plus className="h-4 w-4" />
-                <span>إضافة فئة رئيسية</span>
-              </Button>
-            </div>
+            <Button
+              size="sm"
+              onClick={openAddMainCategory}
+              disabled={!currentKiosk?.id}
+              className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white rounded-xl"
+            >
+              <Plus className="h-4 w-4" />
+              <span>إضافة فئة رئيسية جديدة</span>
+            </Button>
           </div>
 
           {!currentKiosk?.id ? (
@@ -475,7 +749,7 @@ export default function KioskClient() {
                 لم يتم إعداد الكشك لهذه المدينة بعد
               </h3>
               <p className="text-xs text-gray-500 mb-4">
-                يرجى الانتقال لتبويب "إعدادات الكشك بالمدينة" لحفظ الكشك أولاً، ثم العودة لإضافة الفئات.
+                يرجى الانتقال لتبويب "إعدادات وتوقيتات الكشك" لحفظ الكشك أولاً.
               </p>
               <Button size="sm" onClick={() => setActiveTab("store")}>
                 ضبط إعدادات الكشك الآن
@@ -498,146 +772,112 @@ export default function KioskClient() {
             </Card>
           ) : (
             <div className="space-y-4">
-              {categories.map((mainCat) => {
-                const mainName =
-                  typeof mainCat.name === "object" ? mainCat.name : {};
-                const children: any[] = Array.isArray(mainCat.Children)
-                  ? mainCat.Children
-                  : [];
+              {categories.map((cat: any) => {
+                const nameAr = cat.name?.ar || cat.name?.en || "بدون اسم";
+                const subCats = Array.isArray(cat.Children) ? cat.Children : [];
 
                 return (
-                  <Card
-                    key={mainCat.id}
-                    className="border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm"
-                  >
-                    <div className="p-4 bg-gray-50/70 dark:bg-gray-800/70 border-b flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        {mainCat.image ? (
-                          <img
-                            src={mainCat.image.startsWith("http") ? mainCat.image : `/${mainCat.image}`}
-                            alt=""
-                            className="h-11 w-11 rounded-lg object-cover border"
-                            onError={(e) => {
-                              (e.target as any).src = "https://placehold.co/100x100?text=Category";
-                            }}
-                          />
-                        ) : (
-                          <div className="h-11 w-11 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-lg">
-                            📁
-                          </div>
-                        )}
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-bold text-gray-900 dark:text-gray-100">
-                              {mainName.ar || "فئة بدون اسم"}
-                            </h3>
-                            {mainName.en && (
-                              <span className="text-xs text-gray-400">
-                                ({mainName.en})
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <Badge variant="secondary" className="text-[11px] py-0">
-                              {children.length} فئات فرعية (Sub-categories)
-                            </Badge>
-                            <span className="text-[11px] text-gray-400">
-                              الترتيب: {mainCat.order}
+                  <Card key={cat.id} className="border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <CardHeader className="bg-gray-50/80 dark:bg-gray-800/50 py-3 px-4 border-b">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className="w-2.5 h-6 bg-primary rounded-full" />
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-extrabold text-base text-gray-900 dark:text-gray-100">
+                                {nameAr}
+                              </h3>
+                              <Badge variant="secondary" className="text-xs font-semibold">
+                                {subCats.length} تصنيف فرعي
+                              </Badge>
+                            </div>
+                            <span className="text-xs text-gray-400">
+                              ترتيب العرض: {cat.order || 0}
                             </span>
                           </div>
                         </div>
-                      </div>
 
-                      <div className="flex items-center gap-2 self-end sm:self-auto">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openAddSubCategory(mainCat.id)}
-                          className="h-8 text-xs flex items-center gap-1.5 border-dashed"
-                        >
-                          <FolderPlus className="h-3.5 w-3.5 text-primary" />
-                          <span>إضافة فئة فرعية</span>
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => openEditCategory(mainCat)}
-                          className="h-8 w-8 p-0"
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            if (confirm(`هل أنت متأكد من حذف فئة "${mainName.ar}"؟`)) {
-                              deleteCategoryMutation.mutate(mainCat.id);
-                            }
-                          }}
-                          className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-1.5">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openAddSubCategory(cat.id)}
+                            className="h-8 text-xs flex items-center gap-1 text-primary border-primary/30 hover:bg-primary/10"
+                          >
+                            <FolderPlus className="h-3.5 w-3.5" />
+                            <span>إضافة Sub-category</span>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => openEditCategory(cat)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Edit2 className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              if (confirm(`هل أنت متأكد من حذف فئة "${nameAr}" وجميع تصنيفاتها الفرعية؟`)) {
+                                deleteCategoryMutation.mutate(cat.id);
+                              }
+                            }}
+                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
+                    </CardHeader>
 
-                    {/* Subcategories Shelf */}
+                    {/* Sub-categories */}
                     <CardContent className="p-4">
-                      {children.length === 0 ? (
-                        <p className="text-xs text-gray-400 italic">
-                          لا توجد فئات فرعية تحت هذا القسم بعد. اضغط "إضافة فئة فرعية" لتقسيم المنتجات.
-                        </p>
+                      {subCats.length === 0 ? (
+                        <div className="text-xs text-gray-400 py-2">
+                          لا توجد تصنيفات فرعية مضافة تحت هذه الفئة بعد.
+                        </div>
                       ) : (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                          {children.map((sub) => {
-                            const subName =
-                              typeof sub.name === "object" ? sub.name : {};
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                          {subCats.map((sub: any) => {
+                            const subNameAr = sub.name?.ar || sub.name?.en || "بدون اسم";
                             return (
                               <div
                                 key={sub.id}
-                                className="group relative bg-white dark:bg-gray-800 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 flex flex-col items-center text-center shadow-xs hover:border-primary/50 transition-colors"
+                                className="flex items-center justify-between p-2.5 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-700"
                               >
-                                {sub.image ? (
-                                  <img
-                                    src={sub.image.startsWith("http") ? sub.image : `/${sub.image}`}
-                                    alt=""
-                                    className="h-10 w-10 rounded-md object-cover mb-2 border"
-                                    onError={(e) => {
-                                      (e.target as any).src = "https://placehold.co/100x100?text=Sub";
-                                    }}
-                                  />
-                                ) : (
-                                  <div className="h-10 w-10 rounded-md bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xs mb-2">
-                                    🏷️
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-gray-400">└─</span>
+                                  <div>
+                                    <p className="text-xs font-bold text-gray-800 dark:text-gray-200">
+                                      {subNameAr}
+                                    </p>
+                                    <span className="text-[10px] text-gray-400">
+                                      ترتيب: {sub.order || 0}
+                                    </span>
                                   </div>
-                                )}
-                                <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 line-clamp-1">
-                                  {subName.ar || "فئة فرعية"}
-                                </p>
-                                {subName.en && (
-                                  <p className="text-[10px] text-gray-400 line-clamp-1">
-                                    {subName.en}
-                                  </p>
-                                )}
-
-                                {/* Hover actions */}
-                                <div className="absolute top-1 left-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 dark:bg-gray-800/90 rounded p-0.5">
-                                  <button
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
                                     onClick={() => openEditCategory(sub)}
-                                    className="text-gray-500 hover:text-primary p-0.5"
+                                    className="h-7 w-7 p-0"
                                   >
-                                    <Edit2 className="h-3 w-3" />
-                                  </button>
-                                  <button
+                                    <Edit2 className="h-3.5 w-3.5 text-gray-500" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
                                     onClick={() => {
-                                      if (confirm(`حذف الفئة الفرعية "${subName.ar}"؟`)) {
+                                      if (confirm(`حذف التصنيف الفرعي "${subNameAr}"؟`)) {
                                         deleteCategoryMutation.mutate(sub.id);
                                       }
                                     }}
-                                    className="text-red-400 hover:text-red-600 p-0.5"
+                                    className="h-7 w-7 p-0 text-red-500 hover:bg-red-50"
                                   >
-                                    <Trash2 className="h-3 w-3" />
-                                  </button>
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
                                 </div>
                               </div>
                             );
@@ -653,50 +893,314 @@ export default function KioskClient() {
         </div>
       )}
 
-      {/* ── DIALOG: ADD/EDIT CATEGORY OR SUBCATEGORY ── */}
+      {/* ════════════════════════════════════════════════════════════════════════════
+          TAB 3: KIOSK PRODUCTS & PRICING
+      ════════════════════════════════════════════════════════════════════════════ */}
+      {activeTab === "products" && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <Package className="h-5 w-5 text-primary" />
+                <span>منتجات الكشك ({filteredProducts.length} منتج)</span>
+              </h2>
+              <p className="text-xs text-gray-500">
+                إضافة وتعديل أسعار المنتجات والخصومات وحالة التوفر مباشرة
+              </p>
+            </div>
+
+            <Button
+              size="sm"
+              onClick={openAddProduct}
+              disabled={!currentKiosk?.id}
+              className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white rounded-xl"
+            >
+              <Plus className="h-4 w-4" />
+              <span>إضافة منتج جديد للكشك</span>
+            </Button>
+          </div>
+
+          {/* Search & Filter Bar */}
+          <div className="flex flex-col sm:flex-row items-center gap-3 bg-white dark:bg-gray-800 p-3 rounded-xl border">
+            <div className="relative flex-1 w-full">
+              <Search className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
+              <Input
+                value={productSearch}
+                onChange={(e) => setProductSearch(e.target.value)}
+                placeholder="ابحث بالاسم عن أي منتج في الكشك..."
+                className="pr-9"
+              />
+            </div>
+            <div className="w-full sm:w-60">
+              <Select
+                value={productCategoryFilter}
+                onValueChange={setProductCategoryFilter}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="فلترة حسب الفئة" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">جميع الفئات</SelectItem>
+                  {allSelectableCategories.map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Products Table */}
+          {isProductsLoading ? (
+            <div className="py-12 text-center text-gray-500">جاري تحميل المنتجات...</div>
+          ) : filteredProducts.length === 0 ? (
+            <Card className="p-8 text-center border-dashed">
+              <Package className="h-10 w-10 mx-auto text-gray-400 mb-2" />
+              <h3 className="font-semibold text-gray-700 dark:text-gray-300">
+                لا توجد منتجات مضافة للكشك حتى الآن
+              </h3>
+              <p className="text-xs text-gray-500 mb-4">
+                أضف أول منتج وحدد سعره وتصنيفه ليظهر للعملاء فوراً.
+              </p>
+              <Button size="sm" onClick={openAddProduct}>
+                إضافة أول منتج للكشك
+              </Button>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredProducts.map((p) => {
+                const nameAr = p.name?.ar || p.name?.en || "منتج بدون اسم";
+                const catName = p.Category?.name?.ar || p.Category?.name?.en || "غير محدد";
+                const hasDiscount = p.priceAfterDiscount && p.priceAfterDiscount < p.price;
+
+                return (
+                  <Card key={p.id} className="border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col justify-between">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center font-bold text-lg overflow-hidden">
+                            {p.image ? (
+                              <img src={p.image.startsWith("http") ? p.image : `https://api.makanak-app.com/${p.image}`} alt={nameAr} className="w-full h-full object-cover" />
+                            ) : (
+                              "📦"
+                            )}
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-sm text-gray-900 dark:text-gray-100 line-clamp-1">
+                              {nameAr}
+                            </h4>
+                            <span className="text-[11px] text-gray-500 flex items-center gap-1">
+                              <Tag className="h-3 w-3" />
+                              {catName}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Availability Switch */}
+                        <div className="flex items-center gap-1.5" title="تبديل حالة التوفر">
+                          <Switch
+                            checked={p.available}
+                            onCheckedChange={() => toggleProductMutation.mutate(p.id)}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Pricing Info */}
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        <div>
+                          {hasDiscount && (
+                            <span className="text-xs text-gray-400 line-through mr-1">
+                              {p.price} ج.م
+                            </span>
+                          )}
+                          <span className="text-base font-black text-primary">
+                            {hasDiscount ? p.priceAfterDiscount : p.price} ج.م
+                          </span>
+                        </div>
+                        {hasDiscount && (
+                          <Badge variant="destructive" className="text-[10px]">
+                            خصم {(p.price - p.priceAfterDiscount).toFixed(0)} ج.م
+                          </Badge>
+                        )}
+                      </div>
+                    </CardContent>
+
+                    {/* Actions Footer */}
+                    <div className="bg-gray-50 dark:bg-gray-800/50 px-4 py-2 flex items-center justify-between border-t">
+                      <span className="text-[11px] text-gray-400">
+                        {p.available ? "✅ متوفر للطلب" : "❌ غير متوفر"}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => openEditProduct(p)}
+                          className="h-8 text-xs flex items-center gap-1"
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                          <span>تعديل</span>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            if (confirm(`هل أنت متأكد من حذف المنتج "${nameAr}"؟`)) {
+                              deleteProductMutation.mutate(p.id);
+                            }
+                          }}
+                          className="h-8 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ════════════════════════════════════════════════════════════════════════════
+          TAB 4: KIOSK BANNERS & OFFERS
+      ════════════════════════════════════════════════════════════════════════════ */}
+      {activeTab === "banners" && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <ImageIcon className="h-5 w-5 text-primary" />
+                <span>بانرز وعروض الكشك الإعلانية ({banners.length})</span>
+              </h2>
+              <p className="text-xs text-gray-500">
+                تظهر هذه البانرز داخل صفحة الكشك للمستخدمين لعرض الخصومات والعروض السريعة
+              </p>
+            </div>
+
+            <Button
+              size="sm"
+              onClick={() => {
+                resetBannerForm();
+                setIsBannerDialogOpen(true);
+              }}
+              disabled={!currentKiosk?.id}
+              className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white rounded-xl"
+            >
+              <Plus className="h-4 w-4" />
+              <span>إضافة بانر جديد للكشك</span>
+            </Button>
+          </div>
+
+          {isBannersLoading ? (
+            <div className="py-12 text-center text-gray-500">جاري تحميل البانرز...</div>
+          ) : banners.length === 0 ? (
+            <Card className="p-8 text-center border-dashed">
+              <ImageIcon className="h-10 w-10 mx-auto text-gray-400 mb-2" />
+              <h3 className="font-semibold text-gray-700 dark:text-gray-300">
+                لا توجد بانرز إعلانية مضافة للكشك حتى الآن
+              </h3>
+              <p className="text-xs text-gray-500 mb-4">
+                أضف بانرات عروض ترويجية لتظهر أعلى منتجات الكشك.
+              </p>
+              <Button
+                size="sm"
+                onClick={() => {
+                  resetBannerForm();
+                  setIsBannerDialogOpen(true);
+                }}
+              >
+                إضافة أول بانر للكشك
+              </Button>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {banners.map((b) => {
+                const bannerName = b.name?.ar || b.name?.en || "بانر إعلاني";
+                return (
+                  <Card key={b.id} className="border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <div className="h-32 bg-gray-100 relative">
+                      <img
+                        src={b.image.startsWith("http") ? b.image : `https://api.makanak-app.com/${b.image}`}
+                        alt={bannerName}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <CardContent className="p-3 flex items-center justify-between">
+                      <div>
+                        <h4 className="font-bold text-sm">{bannerName}</h4>
+                        {b.Category && (
+                          <span className="text-xs text-gray-500">
+                            مرتبط بفئة: {b.Category.name?.ar || b.Category.name?.en}
+                          </span>
+                        )}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          if (confirm(`حذف البانر "${bannerName}"؟`)) {
+                            deleteBannerMutation.mutate(b.id);
+                          }
+                        }}
+                        className="text-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── DIALOG 1: ADD/EDIT CATEGORY ── */}
       <Dialog open={isCatDialogOpen} onOpenChange={setIsCatDialogOpen}>
-        <DialogContent className="sm:max-w-[450px]">
+        <DialogContent className="sm:max-w-md" dir="rtl">
           <DialogHeader>
             <DialogTitle>
               {editingCategory
                 ? "تعديل الفئة"
                 : parentCategoryIdForSub
-                ? "إضافة فئة فرعية (Sub-category)"
-                : "إضافة فئة رئيسية للكشك"}
+                ? "إضافة تصنيف فرعي (Sub-category)"
+                : "إضافة فئة رئيسية جديدة"}
             </DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSaveCategory} className="space-y-4">
             <div>
-              <label className="text-sm font-medium">اسم الفئة (عربي)</label>
+              <label className="text-xs font-bold text-gray-700">اسم الفئة بالعربية *</label>
               <Input
                 value={catNameAr}
                 onChange={(e) => setCatNameAr(e.target.value)}
-                placeholder="مثلاً: مشروبات غازية"
+                placeholder="مثال: مشروبات، مقرمشات..."
                 required
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium">اسم الفئة (إنجليزي)</label>
+              <label className="text-xs font-bold text-gray-700">اسم الفئة بالإنجليزية</label>
               <Input
                 value={catNameEn}
                 onChange={(e) => setCatNameEn(e.target.value)}
-                placeholder="e.g. Soft Drinks"
+                placeholder="Beverages, Snacks..."
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium">رابط صورة الفئة (Image URL)</label>
+              <label className="text-xs font-bold text-gray-700">رابط صورة/أيقونة الفئة</label>
               <Input
                 value={catImage}
                 onChange={(e) => setCatImage(e.target.value)}
-                placeholder="uploads/categories/drink.png"
+                placeholder="uploads/category.png"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium">ترتيب الظهور (Order)</label>
+              <label className="text-xs font-bold text-gray-700">ترتيب العرض (Order)</label>
               <Input
                 type="number"
                 value={catOrder}
@@ -705,16 +1209,177 @@ export default function KioskClient() {
               />
             </div>
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsCatDialogOpen(false)}
-              >
+            <DialogFooter className="gap-2 sm:gap-0 mt-4">
+              <Button type="button" variant="outline" onClick={() => setIsCatDialogOpen(false)}>
                 إلغاء
               </Button>
               <Button type="submit" disabled={saveCategoryMutation.isPending}>
                 {saveCategoryMutation.isPending ? "جاري الحفظ..." : "حفظ الفئة"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── DIALOG 2: ADD/EDIT PRODUCT ── */}
+      <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
+        <DialogContent className="sm:max-w-lg" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>
+              {editingProduct ? "تعديل منتج في الكشك" : "إضافة منتج جديد في الكشك"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleSaveProduct} className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-bold">اسم المنتج بالعربية *</label>
+                <Input
+                  value={prodNameAr}
+                  onChange={(e) => setProdNameAr(e.target.value)}
+                  placeholder="شيبسي جبنة متبلة"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold">اسم المنتج بالإنجليزية</label>
+                <Input
+                  value={prodNameEn}
+                  onChange={(e) => setProdNameEn(e.target.value)}
+                  placeholder="Chips Cheese"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold">الفئة أو الـ Sub-category *</label>
+              <Select value={prodCategoryId} onValueChange={setProdCategoryId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر الفئة التابع لها المنتج" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allSelectableCategories.map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-bold">السعر الأصلي (ج.م) *</label>
+                <Input
+                  type="number"
+                  step="0.5"
+                  value={prodPrice}
+                  onChange={(e) => setProdPrice(e.target.value)}
+                  placeholder="20"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold">السعر بعد الخصم (اختياري)</label>
+                <Input
+                  type="number"
+                  step="0.5"
+                  value={prodDiscountPrice}
+                  onChange={(e) => setProdDiscountPrice(e.target.value)}
+                  placeholder="15"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold">رابط صورة المنتج (Image URL)</label>
+              <Input
+                value={prodImage}
+                onChange={(e) => setProdImage(e.target.value)}
+                placeholder="uploads/product.png"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold">وصف المنتج (اختياري)</label>
+              <Input
+                value={prodDescAr}
+                onChange={(e) => setProdDescAr(e.target.value)}
+                placeholder="وصف مختصر للمنتج..."
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-2.5 bg-gray-50 dark:bg-gray-800 rounded-lg border">
+              <div>
+                <p className="font-bold text-xs">توفر المنتج للطلب (In-Stock)</p>
+                <p className="text-[11px] text-gray-500">عند إلغائه يظهر غير متاح في التطبيق</p>
+              </div>
+              <Switch checked={prodAvailable} onCheckedChange={setProdAvailable} />
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0 mt-4">
+              <Button type="button" variant="outline" onClick={() => setIsProductDialogOpen(false)}>
+                إلغاء
+              </Button>
+              <Button type="submit" disabled={saveProductMutation.isPending}>
+                {saveProductMutation.isPending ? "جاري الحفظ..." : "حفظ المنتج"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── DIALOG 3: ADD BANNER ── */}
+      <Dialog open={isBannerDialogOpen} onOpenChange={setIsBannerDialogOpen}>
+        <DialogContent className="sm:max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>إضافة بانر إعلاني لكشك مكانك</DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleSaveBanner} className="space-y-3">
+            <div>
+              <label className="text-xs font-bold">عنوان البانر بالعربية *</label>
+              <Input
+                value={bannerNameAr}
+                onChange={(e) => setBannerNameAr(e.target.value)}
+                placeholder="عروض الصيف على المشروبات"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold">رابط صورة البانر *</label>
+              <Input
+                value={bannerImage}
+                onChange={(e) => setBannerImage(e.target.value)}
+                placeholder="uploads/banner.png"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold">ربط بفئة معينة (اختياري)</label>
+              <Select value={bannerCategoryId} onValueChange={setBannerCategoryId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر الفئة عند الضغط على البانر" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">بدون فئة محددة</SelectItem>
+                  {allSelectableCategories.map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0 mt-4">
+              <Button type="button" variant="outline" onClick={() => setIsBannerDialogOpen(false)}>
+                إلغاء
+              </Button>
+              <Button type="submit" disabled={saveBannerMutation.isPending}>
+                {saveBannerMutation.isPending ? "جاري الحفظ..." : "حفظ البانر"}
               </Button>
             </DialogFooter>
           </form>
