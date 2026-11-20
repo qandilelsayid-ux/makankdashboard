@@ -3414,5 +3414,21 @@
   "home-builder": "بناء الصفحة الرئيسية",
   "governorate-shipping": "الشحن بين المحافظات",
   "substitutionPreference": "تفضيل الاستبدال",
-  "mart-orders": "طلبات المارت والكشك"
+  "mart-orders": "طلبات المارت والكشك",
+  "commissionAppliesTo": "الكوميشن على",
+  "commissionScope_STORE": "المتجر كله",
+  "commissionScope_CATEGORY": "فئة معينة",
+  "commissionScope_PRODUCTS": "منتجات معينة",
+  "commissionScope_DISCOUNTED": "المنتجات اللي عليها خصم",
+  "customCommissionHint": "الكوميشن دي بتحل محل كوميشن المتجر للمنتجات المختارة بس، وباقي المنتجات بتفضل على كوميشن المتجر.",
+  "chooseCommissionCategory": "اختار الفئة",
+  "chooseCommissionProducts": "اختار المنتجات",
+  "commissionProducts": "المنتجات",
+  "commissionDiscountedHint": "هتتطبق على كل منتج عليه خصم دلوقتي في المتجر ده. النسبة المئوية بتتحسب من السعر الأصلي قبل الخصم.",
+  "customCommissionApplied": "اتطبقت على {count} منتج",
+  "customCommissionRemoved": "رجعت المنتجات لكوميشن المتجر",
+  "productsWithCustomCommission": "منتجات ليها كوميشن خاصة",
+  "removeAllCustomCommission": "رجّع لكوميشن المتجر",
+  "noCustomCommission": "مفيش منتجات ليها كوميشن خاصة، كله ماشي بكوميشن المتجر.",
+  "hasDiscountLabel": "عليه خصم"
 }

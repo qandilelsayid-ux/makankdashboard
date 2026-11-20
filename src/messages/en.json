@@ -3411,5 +3411,21 @@
   "home-builder": "Home builder",
   "governorate-shipping": "Governorate shipping",
   "substitutionPreference": "Substitution preference",
-  "mart-orders": "Mart & Kiosk orders"
+  "mart-orders": "Mart & Kiosk orders",
+  "commissionAppliesTo": "Commission applies to",
+  "commissionScope_STORE": "Whole store",
+  "commissionScope_CATEGORY": "A category",
+  "commissionScope_PRODUCTS": "Specific products",
+  "commissionScope_DISCOUNTED": "Discounted products",
+  "customCommissionHint": "This replaces the store commission for the chosen products only; all other products keep the store commission.",
+  "chooseCommissionCategory": "Choose a category",
+  "chooseCommissionProducts": "Choose products",
+  "commissionProducts": "Products",
+  "commissionDiscountedHint": "Applies to every product that has a discount right now in this store. A percentage is taken from the original price before the discount.",
+  "customCommissionApplied": "Applied to {count} products",
+  "customCommissionRemoved": "Products are back on the store commission",
+  "productsWithCustomCommission": "Products with their own commission",
+  "removeAllCustomCommission": "Back to store commission",
+  "noCustomCommission": "No products have their own commission; everything uses the store commission.",
+  "hasDiscountLabel": "discounted"
 }

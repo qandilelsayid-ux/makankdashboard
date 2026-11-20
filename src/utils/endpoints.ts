@@ -154,6 +154,8 @@ export const endpoints = {
   storeManagedByAdminToggle: "/managed-by-admin/toggle",
   storeDiscount: "/discount",
   storeDiscountRemove: "/discount/remove",
+  storeCustomCommission: "/commission/custom",
+  storeCustomCommissionRemove: "/commission/custom/remove",
   onlineDelivery: "/api/orders",
   onlineDeliverySellerProfile: "/api/orders/online-delivery/seller-profile",
   bundles: "/api/bundles",
