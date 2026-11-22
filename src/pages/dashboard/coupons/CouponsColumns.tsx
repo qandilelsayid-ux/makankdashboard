@@ -36,7 +36,14 @@ export default function CouponsColumns(): ColumnDef<Record<string, unknown>>[] {
     {
       accessorKey: "code",
       header: () => <IconHeader columnKey="code" />,
-      cell: ({ getValue }) => <TextCol text={getValue() as string} />
+      cell: ({ getValue, row }) => (
+        <div className="flex items-center gap-1.5">
+          <TextCol text={getValue() as string} />
+          {(row.original as any)?.isHidden && (
+            <Badge variant="secondary" className="text-[10px]">{t("hiddenCouponBadge")}</Badge>
+          )}
+        </div>
+      )
     },
     {
       accessorKey: "type",

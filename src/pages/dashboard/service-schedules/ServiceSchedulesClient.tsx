@@ -66,6 +66,17 @@ function ServiceTabContent({ serviceType, title, subtitle, icon }: ServiceTabPro
   const [liveStatus, setLiveStatus] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // "" = general schedule (all cities without their own hours).
+  const [cityId, setCityId] = useState<string>("");
+  const [cities, setCities] = useState<{ id: number; name: any }[]>([]);
+  const [hasOwnSchedule, setHasOwnSchedule] = useState(false);
+
+  useEffect(() => {
+    fetchHelper({ endPoint: ["cities"], params: { limit: 200 }, redirectOnUnauthorized: false }).then((r: any) =>
+      setCities(Array.isArray(r?.data) ? r.data : []),
+    );
+  }, []);
+  const cityName = (n: any) => (typeof n === "string" ? n : n?.ar ?? n?.en ?? "");
 
   const loadData = async () => {
     setLoading(true);
@@ -74,11 +85,13 @@ function ServiceTabContent({ serviceType, title, subtitle, icon }: ServiceTabPro
         fetchHelper({
           endPoint: ["serviceSchedules", serviceType],
           method: "GET",
+          params: cityId ? { cityId } : undefined,
           redirectOnUnauthorized: false,
         }),
         fetchHelper({
           endPoint: ["serviceSchedules", "availability"],
           method: "GET",
+          params: cityId ? { cityId } : undefined,
           redirectOnUnauthorized: false,
         }),
       ]);
@@ -86,6 +99,7 @@ function ServiceTabContent({ serviceType, title, subtitle, icon }: ServiceTabPro
       if (scheduleRes?.data) {
         setMasterEnabled(scheduleRes.data.masterEnabled !== false);
         setSchedules(scheduleRes.data.schedules || []);
+        setHasOwnSchedule(Boolean(scheduleRes.data.hasOwnSchedule));
       }
 
       if (availRes?.data && availRes.data[serviceType]) {
@@ -101,7 +115,25 @@ function ServiceTabContent({ serviceType, title, subtitle, icon }: ServiceTabPro
 
   useEffect(() => {
     loadData();
-  }, [serviceType]);
+  }, [serviceType, cityId]);
+
+  const useGeneralForCity = async () => {
+    if (!cityId) return;
+    setSaving(true);
+    const res = await fetchHelper({
+      endPoint: ["serviceSchedules", serviceType],
+      method: "PUT",
+      body: { cityId: Number(cityId), useGeneral: true, schedules: [] },
+      redirectOnUnauthorized: false,
+    });
+    setSaving(false);
+    if (res?.success) {
+      toast.success("المدينة رجعت تمشي على المواعيد العامة");
+      await loadData();
+    } else {
+      toast.error(res?.message || "فشل الحفظ");
+    }
+  };
 
   const updateDaySchedule = (dayKey: string, field: keyof DaySchedule, value: any) => {
     setSchedules((prev) =>
@@ -135,6 +167,7 @@ function ServiceTabContent({ serviceType, title, subtitle, icon }: ServiceTabPro
         method: "PUT",
         body: {
           masterEnabled,
+          ...(cityId ? { cityId: Number(cityId) } : {}),
           schedules: schedules.map((s) => ({
             day: s.day,
             openingTime: s.openingTime,
@@ -171,6 +204,43 @@ function ServiceTabContent({ serviceType, title, subtitle, icon }: ServiceTabPro
 
   return (
     <div className="space-y-6">
+      {/* Per-city hours: pick a city to give it its own schedule. */}
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-muted/20 p-3">
+        <span className="text-sm font-semibold">المواعيد لـ:</span>
+        <select
+          className="rounded-md border bg-background px-3 py-1.5 text-sm"
+          value={cityId}
+          onChange={(e) => setCityId(e.target.value)}
+        >
+          <option value="">كل المدن (المواعيد العامة)</option>
+          {cities.map((c) => (
+            <option key={c.id} value={String(c.id)}>
+              {cityName(c.name)}
+            </option>
+          ))}
+        </select>
+        {cityId && (
+          <span className="text-xs text-muted-foreground">
+            {hasOwnSchedule
+              ? "المدينة دي ليها مواعيد خاصة بيها."
+              : "المدينة دي ماشية على المواعيد العامة — لو حفظت هنا هيبقى ليها مواعيد خاصة."}
+          </span>
+        )}
+        {cityId && hasOwnSchedule && (
+          <button
+            type="button"
+            className="text-xs font-semibold text-red-600 hover:underline"
+            disabled={saving}
+            onClick={useGeneralForCity}
+          >
+            رجّعها للمواعيد العامة
+          </button>
+        )}
+        <span className="w-full text-xs text-muted-foreground">
+          زرار التشغيل والإيقاف هنا للأبلكيشن كله. لو عايز تقفل المندوب الخاص في مدينة واحدة بس، اقفل "المندوب الخاص" من صفحة المدينة.
+        </span>
+      </div>
+
       {/* Top Banner: Master Switch & Live Cairo Status */}
       <div className="grid gap-4 md:grid-cols-2">
         {/* Master Switch Card */}

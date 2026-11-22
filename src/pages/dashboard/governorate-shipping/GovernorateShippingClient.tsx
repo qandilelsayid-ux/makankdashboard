@@ -120,6 +120,7 @@ interface ShippingGovernorate {
   nameAr: string;
   nameEn: string;
   isActive: boolean;
+  isPickupOrigin?: boolean;
 }
 
 interface Driver {
@@ -418,6 +419,24 @@ export default function GovernorateShippingClient(): JSX.Element {
       toast.error(err?.message || "فشل إضافة المحافظة");
     },
   });
+
+  // Mark / unmark a place as a pickup origin (shipments leave only from these).
+  const togglePickupMutation = useMutation({
+    mutationFn: async ({ id, isPickupOrigin }: { id: number; isPickupOrigin: boolean }) =>
+      fetchHelper({
+        endPoint: ["governorateShipping", "govShippingAdmin", "govShippingGovs", id],
+        method: "PATCH",
+        body: { isPickupOrigin },
+      }),
+    onSuccess: (res: any) => {
+      if (res?.success === false) {
+        toast.error(res?.message || "فشل التعديل");
+        return;
+      }
+      refetchGovs();
+    },
+  });
+  const pickupOrigins = govsList.filter((g) => g.isPickupOrigin);
 
   return (
     <div className="space-y-6">
@@ -814,6 +833,12 @@ export default function GovernorateShippingClient(): JSX.Element {
                   جاري تحميل المحافظات...
                 </div>
               ) : (
+                <>
+                <div className="mb-3 rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs text-sky-800 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-200">
+                  {pickupOrigins.length
+                    ? `الشحن بيتسلّم من: ${pickupOrigins.map((g) => g.nameAr).join("، ")} بس، وبيتوصّل لأي مكان.`
+                    : "مفيش مكان متعلّم كنقطة استلام، فالعميل يقدر يشحن من أي محافظة. علّم \"استلام من هنا\" على المكان اللي عايز الشحن يطلع منه (زي المحلة)."}
+                </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                   {govsList.map((gov) => (
                     <div
@@ -826,15 +851,24 @@ export default function GovernorateShippingClient(): JSX.Element {
                           {gov.nameEn}
                         </div>
                       </div>
-                      <Badge
-                        variant="outline"
-                        className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200"
+                      <button
+                        type="button"
+                        disabled={togglePickupMutation.isPending}
+                        onClick={() =>
+                          togglePickupMutation.mutate({ id: gov.id, isPickupOrigin: !gov.isPickupOrigin })
+                        }
+                        className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                          gov.isPickupOrigin
+                            ? "border-sky-300 bg-sky-100 text-sky-800"
+                            : "border-gray-200 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800"
+                        }`}
                       >
-                        مفعلة
-                      </Badge>
+                        {gov.isPickupOrigin ? "✓ استلام من هنا" : "استلام من هنا"}
+                      </button>
                     </div>
                   ))}
                 </div>
+                </>
               )}
             </CardContent>
           </Card>

@@ -152,6 +152,7 @@ export const endpoints = {
   storeZonePricingToggle: "/zone-pricing/toggle",
   storeZonePrices: "/zone-prices",
   storeManagedByAdminToggle: "/managed-by-admin/toggle",
+  storePickupToggle: "/pickup/toggle",
   storeDiscount: "/discount",
   storeDiscountRemove: "/discount/remove",
   storeCustomCommission: "/commission/custom",

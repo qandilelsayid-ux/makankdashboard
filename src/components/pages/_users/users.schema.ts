@@ -14,7 +14,8 @@ phone: StringReq(t).refine((val) => /^\+200?1[0125]\d{8}$/.test(val), {
   message: t("enterValidEgyptianPhone")
 }),
 password:isEdit ? noSchema() : StringReq(t,6),
-roleId:SelectReq(t)
+roleId:SelectReq(t),
+managedCityId: z.union([z.number(), z.string()]).optional().nullable()
 })
   };
 

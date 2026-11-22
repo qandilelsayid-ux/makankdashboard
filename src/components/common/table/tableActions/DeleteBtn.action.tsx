@@ -63,6 +63,12 @@ export default function DeleteBtn({
           <DialogDescription className="text-gray-600 dark:text-gray-400">
             {t("Are you sure you want to delete this item? This action cannot be undone")}
           </DialogDescription>
+          {onDelete?.[0] === "role" && (
+            // Deleting a role also deletes every account that has it.
+            <p className="rounded-md border border-red-200 bg-red-50 p-2.5 text-sm font-semibold text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+              {t("deleteRoleWarning")}
+            </p>
+          )}
         </DialogHeader>
         <DialogFooter className="gap-2">
           <Button

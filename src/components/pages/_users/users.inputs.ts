@@ -7,7 +7,9 @@ export const UsersInputs = ({ isEdit }: { isEdit: boolean }) => {
     { name: "email", type: "email", required: true },
     { name: "phone", type: "tel", required: true },
     { name: "password", type: "password", required: true , isHidden: isEdit},
-    { name: "roleId", type: "selectPaginated", apiUrl: ['allRoles'], required: true }
+    { name: "roleId", type: "selectPaginated", apiUrl: ['allRoles'], required: true },
+    // City admin: manages this one city only (empty = every city).
+    { name: "managedCityId", type: "selectPaginated", apiUrl: ['cities'], required: false, toolTip: "managedCityIdTooltip" }
   ];
   return inputs;
 };

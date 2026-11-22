@@ -22,9 +22,10 @@ export default function useCouponsLogic({ data }: { data?: CouponsType }) {
 	} = useForm<CouponsType>({
 		mode: "onSubmit",
 		resolver: zodResolver(CouponsSchema(t)),
-		defaultValues: extractFormDefaultInputs(defaultInputs, {
-			...data,
-		}) as CouponsType,
+		defaultValues: {
+			...(extractFormDefaultInputs(defaultInputs, { ...data }) as CouponsType),
+			isHidden: (data as any)?.isHidden ? ["true"] : [],
+		} as CouponsType,
 	});
 
 	const couponType = useWatch({ control, name: "type" });
@@ -47,6 +48,8 @@ export default function useCouponsLogic({ data }: { data?: CouponsType }) {
 			storeIds: formData.type === "STORE_WISE" ? formData.storeIds : undefined,
 			zoneIds: formData.zoneIds,
 		};
+		// Checkbox -> boolean; always sent so un-ticking really un-hides it.
+		const isHidden = Array.isArray(formData.isHidden) && formData.isHidden.includes("true");
 
 		Object.keys(normalizedData).forEach(key => {
 			const value = normalizedData[key as keyof typeof normalizedData];
@@ -60,7 +63,7 @@ export default function useCouponsLogic({ data }: { data?: CouponsType }) {
 
 		await formAction({
 			data,
-			formData: extractFormNameInputs({ inputs, data: normalizedData }),
+			formData: { ...extractFormNameInputs({ inputs, data: normalizedData }), isHidden },
 			endpoint: ['coupons'],
 			customReset: () => reset(extractFormDefaultInputs(inputs, undefined) as any),
 			t,

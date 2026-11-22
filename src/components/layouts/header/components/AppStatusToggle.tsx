@@ -87,13 +87,38 @@ export function AppStatusToggle() {
   const [titleEn, setTitleEn] = useState(APP_CLOSURE_PRESETS[0].titleEn);
   const [messageAr, setMessageAr] = useState(APP_CLOSURE_PRESETS[0].messageAr);
   const [messageEn, setMessageEn] = useState(APP_CLOSURE_PRESETS[0].messageEn);
+  // Empty = all cities.
+  const [maintenanceCityIds, setMaintenanceCityIds] = useState<number[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [busyCityIds, setBusyCityIds] = useState<number[]>([]);
+  const [busyMessageAr, setBusyMessageAr] = useState("");
+  const [showBusy, setShowBusy] = useState(false);
+  const [busyNext, setBusyNext] = useState(false);
+
+  // City admin: no app-wide switches, just "أدمن مدينة X".
+  const [cityAdminName, setCityAdminName] = useState<string | null>(null);
 
   // 1) On mount — GET current app status
   const fetchStatus = useCallback(async () => {
     try {
+      const me = await apiClient.get("/api/users/me").catch(() => null);
+      const meUser = me?.data?.data?.user ?? me?.data?.data ?? {};
+      if (meUser?.managedCityId) {
+        const city = await apiClient.get(`/api/cities/${meUser.managedCityId}`).catch(() => null);
+        const n = city?.data?.data?.name;
+        setCityAdminName(
+          (typeof n === "string" ? n : n?.[locale] ?? n?.ar ?? n?.en) || `#${meUser.managedCityId}`
+        );
+        return;
+      }
       const res = await apiClient.get("/api/settings/app-status");
       const data = res?.data?.data ?? res?.data ?? {};
-      setIsMaintenance(Boolean(data.isMaintenance));
+      const cfg = data.settings ?? {};
+      setIsMaintenance(Boolean(cfg.maintenance ?? data.isMaintenance));
+      setMaintenanceCityIds(Array.isArray(cfg.maintenanceCityIds) ? cfg.maintenanceCityIds : []);
+      setBusy(Boolean(cfg.busyMode));
+      setBusyCityIds(Array.isArray(cfg.busyCityIds) ? cfg.busyCityIds : []);
+      setBusyMessageAr(cfg.busyMessage?.ar ?? "");
     } catch {
       // silent fail — don't break the dashboard
     } finally {
@@ -153,6 +178,7 @@ export function AppStatusToggle() {
     try {
       await apiClient.patch("/api/settings/app-status", {
         isMaintenance: nextValue,
+        maintenanceCityIds: nextValue ? maintenanceCityIds : [],
         ...(nextValue
           ? {
               titleAr: effectiveTitleAr,
@@ -182,6 +208,29 @@ export function AppStatusToggle() {
     }
   };
 
+  const confirmBusy = async () => {
+    setShowBusy(false);
+    setIsPending(true);
+    try {
+      await apiClient.patch("/api/settings/app-status", {
+        busyMode: busyNext,
+        busyCityIds: busyNext ? busyCityIds : [],
+        busyMessageAr: busyNext ? busyMessageAr : "",
+        busyMessageEn: busyNext ? busyMessageAr : "",
+      });
+      setBusy(busyNext);
+      toast.success(
+        busyNext
+          ? locale === "ar" ? "🟠 كل حاجة بقت مشغولة" : "🟠 Everything is now busy"
+          : locale === "ar" ? "🟢 رجع الشغل طبيعي" : "🟢 Back to normal"
+      );
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || (locale === "ar" ? "فشل التحديث" : "Update failed"));
+    } finally {
+      setIsPending(false);
+    }
+  };
+
   const statusLabel = isMaintenance
     ? locale === "ar"
       ? "مغلق للصيانة"
@@ -201,6 +250,14 @@ export function AppStatusToggle() {
     : locale === "ar"
     ? "التطبيق مفتوح — اضغط للإغلاق للصيانة"
     : "App open — click to close for maintenance";
+
+  if (cityAdminName) {
+    return (
+      <span className="rounded-full border border-sky-300 bg-sky-50 px-2.5 py-1 text-[11px] font-bold text-sky-800 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-200">
+        {locale === "ar" ? `أدمن مدينة: ${cityAdminName}` : `City admin: ${cityAdminName}`}
+      </span>
+    );
+  }
 
   return (
     <>
@@ -233,6 +290,22 @@ export function AppStatusToggle() {
                 disabled={isLoading || isPending}
                 aria-label="Toggle App Maintenance Mode"
               />
+              {/* Busy: browse / track / support only, no new orders */}
+              <button
+                type="button"
+                disabled={isLoading || isPending}
+                onClick={() => {
+                  setBusyNext(!busy);
+                  setShowBusy(true);
+                }}
+                className={`ms-1 rounded-full border px-2 py-0.5 text-[11px] font-bold ${
+                  busy
+                    ? "border-amber-400 bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
+                    : "border-border text-muted-foreground hover:bg-muted/50"
+                }`}
+              >
+                {busy ? (locale === "ar" ? "مشغول ✓" : "Busy ✓") : locale === "ar" ? "مشغول" : "Busy"}
+              </button>
             </div>
           </TooltipTrigger>
           <TooltipContent side="bottom" className="text-xs max-w-48 text-center">
@@ -303,6 +376,12 @@ export function AppStatusToggle() {
                   ))}
                 </RadioGroup>
               </div>
+
+              <CityPicker
+                locale={locale}
+                value={maintenanceCityIds}
+                onChange={setMaintenanceCityIds}
+              />
 
               <div className="grid gap-3">
                 <div className="grid gap-1.5">
@@ -385,6 +464,107 @@ export function AppStatusToggle() {
           </div>
         </DialogContent>
       </Dialog>
+      <Dialog open={showBusy} onOpenChange={setShowBusy}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {busyNext
+                ? locale === "ar" ? "تشغيل وضع \"مشغول\"" : "Turn on busy mode"
+                : locale === "ar" ? "إيقاف وضع \"مشغول\"" : "Turn off busy mode"}
+            </DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed pt-1">
+              {busyNext
+                ? locale === "ar"
+                  ? "كل المطاعم والمارت والكشك والمندوب الخاص هيظهروا مشغولين ومفيش طلبات جديدة. العميل يقدر يتفرج ويتابع طلبه ويكلم الدعم بس."
+                  : "Every store, Mart, Kiosk and courier shows as busy and no new orders are taken. Customers can still browse, track orders and contact support."
+                : locale === "ar"
+                ? "الطلبات هترجع تشتغل عادي."
+                : "Orders will be accepted again."}
+            </DialogDescription>
+          </DialogHeader>
+          {busyNext && (
+            <div className="space-y-4 py-2">
+              <CityPicker locale={locale} value={busyCityIds} onChange={setBusyCityIds} />
+              <div className="grid gap-1.5">
+                <Label className="text-xs">
+                  {locale === "ar" ? "رسالة تظهر تحت كلمة \"مشغول\" (اختياري)" : "Message under \"Busy\" (optional)"}
+                </Label>
+                <Textarea
+                  rows={2}
+                  value={busyMessageAr}
+                  onChange={(e) => setBusyMessageAr(e.target.value)}
+                  placeholder={locale === "ar" ? "مثال: ضغط طلبات عالي، جرّب كمان نص ساعة" : "e.g. High demand, try again in 30 minutes"}
+                />
+              </div>
+            </div>
+          )}
+          <div className="flex gap-3 justify-end mt-4">
+            <DialogClose asChild>
+              <Button variant="outline" size="sm">{locale === "ar" ? "إلغاء" : "Cancel"}</Button>
+            </DialogClose>
+            <Button
+              size="sm"
+              onClick={confirmBusy}
+              className={busyNext ? "bg-amber-600 hover:bg-amber-700 text-white" : "bg-emerald-600 hover:bg-emerald-700 text-white"}
+            >
+              {busyNext ? (locale === "ar" ? "شغّل \"مشغول\"" : "Turn on") : locale === "ar" ? "رجّع الشغل" : "Turn off"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
+  );
+}
+
+// Cities a switch applies to; nothing picked = all cities.
+function CityPicker({
+  locale,
+  value,
+  onChange,
+}: {
+  locale: string;
+  value: number[];
+  onChange: (ids: number[]) => void;
+}) {
+  const [cities, setCities] = useState<{ id: number; name: any }[]>([]);
+  useEffect(() => {
+    apiClient
+      .get("/api/cities", { params: { limit: 200 } })
+      .then((res) => {
+        const list = res?.data?.data ?? [];
+        setCities(Array.isArray(list) ? list : []);
+      })
+      .catch(() => setCities([]));
+  }, []);
+  const name = (n: any) => (typeof n === "string" ? n : n?.[locale] ?? n?.ar ?? n?.en ?? "");
+  const toggle = (id: number) =>
+    onChange(value.includes(id) ? value.filter((x) => x !== id) : [...value, id]);
+  return (
+    <div className="space-y-2">
+      <Label className="text-xs font-semibold">{locale === "ar" ? "المدن" : "Cities"}</Label>
+      <div className="flex max-h-36 flex-wrap gap-1.5 overflow-y-auto">
+        <button
+          type="button"
+          onClick={() => onChange([])}
+          className={`rounded-full border px-2.5 py-1 text-xs ${
+            value.length === 0 ? "border-primary bg-primary/10 font-semibold text-primary" : "hover:bg-muted/50"
+          }`}
+        >
+          {locale === "ar" ? "كل المدن" : "All cities"}
+        </button>
+        {cities.map((c) => (
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => toggle(c.id)}
+            className={`rounded-full border px-2.5 py-1 text-xs ${
+              value.includes(c.id) ? "border-primary bg-primary/10 font-semibold text-primary" : "hover:bg-muted/50"
+            }`}
+          >
+            {name(c.name)}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }

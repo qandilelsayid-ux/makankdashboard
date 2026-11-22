@@ -28,7 +28,12 @@ export default function useUsersLogic({ data }: { data?: UsersType }) {
     const extracted = extractFormNameInputs({ inputs, data: formData });
     const payload =
       typeof extracted === "object" && !(extracted instanceof FormData) && (extracted as any)?.roleId
-        ? { ...extracted, roleId: Number((extracted as any).roleId) }
+        ? {
+            ...extracted,
+            roleId: Number((extracted as any).roleId),
+            // Empty clears the city (back to every city).
+            managedCityId: (formData as any).managedCityId ? Number((formData as any).managedCityId) : null
+          }
         : extracted;
 
     await formAction({

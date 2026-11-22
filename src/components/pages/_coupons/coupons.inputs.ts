@@ -18,6 +18,17 @@ export const CouponsInputs = (couponType?: CouponType | null) => {
   const inputs: FormInput[] = [
     { name: "title", type: "text", multiLang: true, cardId: 'lang', required: true },
     { name: "code", type: "text", cardId: 'basic', required: true },
+    {
+      // Hidden coupon: not shown in the app and no notification; it works only
+      // for people who get the code (campaign, street promo…).
+      name: "isHidden",
+      type: "checkbox",
+      cardId: 'basic',
+      label: "",
+      inputClassName: "button-checkbox",
+      toolTip: t("hiddenCouponTooltip"),
+      options: [{ label: t("hiddenCoupon"), value: "true" }],
+    },
     { name: "type", type: "radioGroup", width: 6, cardId: 'discount', required: true, options: CouponTypesOPtions(t) },
     { name: "discountType", type: "radioGroup", cardId: 'discount', required: true, options: CouponDiscountTypeOptions(t) },
     { name: "discountValue", type: "number", cardId: 'discount', required: true },

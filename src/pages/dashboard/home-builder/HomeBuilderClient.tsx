@@ -69,11 +69,13 @@ export default function HomeBuilderClient() {
     kioskImage: string;
     shippingImage: string;
     tableImage: string;
+    specialImage: string;
   }>({
     martImage: "",
     kioskImage: "",
     shippingImage: "",
     tableImage: "",
+    specialImage: "",
   });
   const [savingQuickServices, setSavingQuickServices] = useState(false);
   const [uploadingQuickCard, setUploadingQuickCard] = useState<string | null>(null);
@@ -159,6 +161,7 @@ export default function HomeBuilderClient() {
         kioskImage: qsRes.data.kioskImage || "",
         shippingImage: qsRes.data.shippingImage || "",
         tableImage: qsRes.data.tableImage || "",
+        specialImage: qsRes.data.specialImage || "",
       });
     }
     setLoading(false);
@@ -190,7 +193,7 @@ export default function HomeBuilderClient() {
   };
 
   const handleQuickCardUpload = async (
-    key: "martImage" | "kioskImage" | "shippingImage" | "tableImage",
+    key: "martImage" | "kioskImage" | "shippingImage" | "tableImage" | "specialImage",
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const file = e.target.files?.[0];
@@ -798,6 +801,15 @@ export default function HomeBuilderClient() {
                     pillBg: "bg-pink-100 text-pink-900 border-pink-200",
                     defaultImg:
                       "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=300&q=80",
+                  },
+                  {
+                    key: "specialImage" as const,
+                    title: isAr ? "خدمات خاصة" : "Special services",
+                    subtitle: isAr ? "مندوب خاص وصيدلية" : "Courier & pharmacy",
+                    pillText: isAr ? "صفحة الخدمات الخاصة" : "Special services page",
+                    pillBg: "bg-violet-100 text-violet-900 border-violet-200",
+                    defaultImg:
+                      "https://images.unsplash.com/photo-1526367790999-0150786686a2?auto=format&fit=crop&w=300&q=80",
                   },
                 ].map((card) => {
                   const currentVal = quickServices[card.key] || "";

@@ -10,6 +10,7 @@ import { StoreStats } from "./details/StoreStats";
 import { StoreTabs } from "./details/StoreTabs";
 import { StoreManagedByAdminToggle } from "./details/StoreManagedByAdminToggle";
 import { StoreDiscountButton } from "./details/StoreDiscountButton";
+import { StorePickupToggle } from "./details/StorePickupToggle";
 import { StorePrepTimeButton } from "./details/StorePrepTimeButton";
 import { StoreReportDialog } from "./details/StoreReportDialog";
 import { StoreSettleWalletButton } from "./details/StoreSettleWalletButton";
@@ -111,6 +112,10 @@ export default function StoreDetailsPage({
             <StoreManagedByAdminToggle
               storeId={Number(data.id)}
               initialEnabled={(data as any).managedByAdmin}
+            />
+            <StorePickupToggle
+              storeId={Number(data.id)}
+              initialEnabled={(data as any).pickupEnabled}
             />
           </div>
           <div className="flex items-center gap-2 shrink-0 flex-nowrap">

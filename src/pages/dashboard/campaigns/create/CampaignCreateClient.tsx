@@ -50,6 +50,9 @@ type CampaignData = {
   clickDeliveryId?: string | number | null;
   clickUrl?: string;
   deliveryId?: string | null;
+  popupLayout?: "IMAGE" | "STORES" | null;
+  popupStoreIds?: Array<string | number> | null;
+  placement?: "HOME" | "KIOSK" | "MART" | null;
 };
 
 type CampaignFormState = {
@@ -76,6 +79,10 @@ type CampaignFormState = {
   clickDeliveryId: string;
   clickUrl: string;
   deliveryId: string;
+  // Popup (OFFER) only.
+  popupLayout: "IMAGE" | "STORES";
+  popupStoreIds: string[];
+  placement: "HOME" | "KIOSK" | "MART";
 };
 
 const incentiveTypes: IncentiveType[] = ["none", "freeDelivery", "discount"];
@@ -147,7 +154,10 @@ function getInitialForm(data?: CampaignData | null, locale = "ar"): CampaignForm
     clickServiceId: data?.clickServiceId ? String(data.clickServiceId) : "",
     clickDeliveryId: data?.clickDeliveryId ? String(data.clickDeliveryId) : "",
     clickUrl: data?.clickUrl ?? "",
-    deliveryId: data?.deliveryId ? String(data.deliveryId) : ""
+    deliveryId: data?.deliveryId ? String(data.deliveryId) : "",
+    popupLayout: data?.popupLayout === "STORES" ? "STORES" : "IMAGE",
+    popupStoreIds: Array.isArray(data?.popupStoreIds) ? data!.popupStoreIds!.map(String) : [],
+    placement: data?.placement === "KIOSK" || data?.placement === "MART" ? data.placement : "HOME"
   };
 }
 
@@ -291,6 +301,14 @@ export default function CampaignCreateClient({ data }: { data?: CampaignData | n
     if (form.endAt) body.append("endAt", toIsoDate(form.endAt));
     if (form.displayIntervalHours !== "") body.append("displayIntervalHours", form.displayIntervalHours);
 
+    if (isOffer) {
+      body.append("popupLayout", form.popupLayout);
+      body.append("placement", form.placement);
+      if (form.popupLayout === "STORES") {
+        body.append("popupStoreIds", JSON.stringify(form.popupStoreIds.map(Number).filter(Boolean)));
+      }
+    }
+
     return body;
   };
 
@@ -298,7 +316,8 @@ export default function CampaignCreateClient({ data }: { data?: CampaignData | n
     if (!isOffer && (!form.titleAr.trim() || !form.titleEn.trim())) return t("campaignTitleRequired");
     if (requiresDescription && (!form.descriptionAr.trim() || !form.descriptionEn.trim())) return t("campaignDescriptionRequired");
     if (!isOffer && form.incentiveType === "discount" && (!form.discountValueAr.trim() || !form.discountValueEn.trim())) return t("campaignDiscountValueRequired");
-    if (isOffer && !form.image && !data?.image) return t("campaignImageRequired");
+    if (isOffer && form.popupLayout === "IMAGE" && !form.image && !data?.image) return t("campaignImageRequired");
+    if (isOffer && form.popupLayout === "STORES" && form.popupStoreIds.length === 0) return t("popupStoresRequired");
     if (requiresStore && !form.storeId) return t("campaignStoreRequired");
     if (requiresService && !form.serviceId) return t("campaignServiceRequired");
     if (requiresUsers && form.targetUserIds.length === 0) return t("campaignUsersRequired");
@@ -468,7 +487,64 @@ export default function CampaignCreateClient({ data }: { data?: CampaignData | n
                 )}
               </>
             )}
-            {(isOffer || form.type === "NOTIFICATION") && (
+            {isOffer && (
+              <div className="grid gap-4 rounded-xl border bg-background/60 p-4">
+                <div className="grid gap-2">
+                  <Label>{t("popupLayout")}</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(["IMAGE", "STORES"] as const).map(layout => (
+                      <button
+                        key={layout}
+                        type="button"
+                        onClick={() => updateForm("popupLayout", layout)}
+                        className={cn(
+                          "rounded-lg border p-3 text-sm font-semibold text-start",
+                          form.popupLayout === layout ? "border-primary bg-primary/10 text-primary" : "hover:bg-muted/50"
+                        )}
+                      >
+                        {t(layout === "IMAGE" ? "popupLayoutImage" : "popupLayoutStores")}
+                        <span className="mt-1 block text-xs font-normal text-muted-foreground">
+                          {t(layout === "IMAGE" ? "popupLayoutImageHint" : "popupLayoutStoresHint")}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {form.popupLayout === "STORES" && (
+                  <div className="grid gap-2">
+                    <Label>{t("popupStores")} *</Label>
+                    <SelectPaginated
+                      isMulti
+                      name="popup-stores"
+                      value={form.popupStoreIds}
+                      onChange={v => updateForm("popupStoreIds", Array.isArray(v) ? (v as any[]).map(String) : [])}
+                      apiUrl={["stores"]}
+                      placeholder={t("popupStoresPlaceholder")}
+                    />
+                    <p className="text-xs text-muted-foreground">{t("popupStoresHint")}</p>
+                  </div>
+                )}
+                <div className="grid gap-2">
+                  <Label>{t("popupPlacement")}</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(["HOME", "KIOSK", "MART"] as const).map(pl => (
+                      <button
+                        key={pl}
+                        type="button"
+                        onClick={() => updateForm("placement", pl)}
+                        className={cn(
+                          "rounded-lg border p-2.5 text-sm font-semibold",
+                          form.placement === pl ? "border-primary bg-primary/10 text-primary" : "hover:bg-muted/50"
+                        )}
+                      >
+                        {t(`popupPlacement_${pl}`)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+            {(form.type === "NOTIFICATION" || (isOffer && form.popupLayout === "IMAGE")) && (
             <div className="grid gap-2">
               <Label>{isOffer ? `${t("Offer Image")} *` : t("Notification Image (optional)")}</Label>
               <div className="flex gap-2 items-center">
