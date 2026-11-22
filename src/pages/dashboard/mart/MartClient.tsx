@@ -147,7 +147,7 @@ export default function MartClient() {
     queryKey: ["mart-cities"],
     queryFn: () =>
       fetchHelper({
-        endPoint: "city" as any,
+        endPoint: "cities" as any,
         method: "GET",
       }),
   });

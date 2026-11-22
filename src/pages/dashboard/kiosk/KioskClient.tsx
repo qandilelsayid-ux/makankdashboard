@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { resolveDashboardImageUrl } from "../home-builder/homeBuilderUtils";
 
 export default function KioskClient() {
   const queryClient = useQueryClient();
@@ -291,10 +292,13 @@ export default function KioskClient() {
   const saveCategoryMutation = useMutation({
     mutationFn: (body: any) => {
       if (editingCategory) {
+        // The update DTO rejects storeId ("property storeId should not
+        // exist"), which made every edit fail — it only belongs on create.
+        const { storeId: _storeId, ...patch } = body;
         return fetchHelper({
           endPoint: `kiosk/admin/category/${editingCategory.id}` as any,
           method: "PATCH",
-          body,
+          body: patch,
         });
       }
       return fetchHelper({
@@ -332,10 +336,13 @@ export default function KioskClient() {
   const saveProductMutation = useMutation({
     mutationFn: (body: any) => {
       if (editingProduct) {
+        // The update DTO rejects storeId ("property storeId should not
+        // exist"), which made every edit fail — it only belongs on create.
+        const { storeId: _storeId, ...patch } = body;
         return fetchHelper({
           endPoint: `kiosk/admin/product/${editingProduct.id}` as any,
           method: "PATCH",
-          body,
+          body: patch,
         });
       }
       return fetchHelper({
@@ -481,7 +488,8 @@ export default function KioskClient() {
     saveCategoryMutation.mutate({
       storeId: currentKiosk.id,
       name: { ar: catNameAr, en: catNameEn || catNameAr },
-      image: catImage || undefined,
+      // On edit send "" too, so "شيل الصورة" really removes it.
+      image: editingCategory ? catImage : catImage || undefined,
       order: Number(catOrder) || 0,
       parentId: parentCategoryIdForSub || undefined,
     });
@@ -875,7 +883,7 @@ export default function KioskClient() {
                     <CardHeader className="bg-gray-50/80 dark:bg-gray-800/50 py-3 px-4 border-b">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <span className="w-2.5 h-6 bg-primary rounded-full" />
+                          <CategoryThumb image={cat.image} name={nameAr} size="md" />
                           <div>
                             <div className="flex items-center gap-2">
                               <h3 className="font-extrabold text-base text-gray-900 dark:text-gray-100">
@@ -941,7 +949,7 @@ export default function KioskClient() {
                                 className="flex items-center justify-between p-2.5 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-700"
                               >
                                 <div className="flex items-center gap-2">
-                                  <span className="text-xs text-gray-400">└─</span>
+                                  <CategoryThumb image={sub.image} name={subNameAr} size="sm" />
                                   <div>
                                     <p className="text-xs font-bold text-gray-800 dark:text-gray-200">
                                       {subNameAr}
@@ -1332,14 +1340,11 @@ export default function KioskClient() {
               />
             </div>
 
-            <div>
-              <label className="text-xs font-bold text-gray-700">رابط صورة/أيقونة الفئة</label>
-              <Input
-                value={catImage}
-                onChange={(e) => setCatImage(e.target.value)}
-                placeholder="uploads/category.png"
-              />
-            </div>
+            <KioskImageField
+              label={parentCategoryIdForSub ? "صورة التصنيف الفرعي" : "صورة الفئة"}
+              value={catImage}
+              onChange={setCatImage}
+            />
 
             <div>
               <label className="text-xs font-bold text-gray-700">ترتيب العرض (Order)</label>
@@ -1629,6 +1634,125 @@ export default function KioskClient() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+// Small square image of a category (or its first letter when it has none) —
+// a category without an image now stands out in the list.
+function CategoryThumb({
+  image,
+  name,
+  size,
+}: {
+  image?: string | null;
+  name: string;
+  size: "sm" | "md";
+}) {
+  const box = size === "md" ? "h-11 w-11 rounded-xl" : "h-8 w-8 rounded-lg";
+  const url = resolveDashboardImageUrl(image);
+  return url ? (
+    <img
+      src={url}
+      alt={name}
+      className={`${box} shrink-0 object-cover border border-gray-200 dark:border-gray-700 bg-white`}
+    />
+  ) : (
+    <span
+      title="الفئة دي ملهاش صورة"
+      className={`${box} shrink-0 flex items-center justify-center border border-dashed border-amber-400 bg-amber-50 text-amber-700 dark:bg-amber-900/20 text-xs font-bold`}
+    >
+      {name.trim().charAt(0) || "؟"}
+    </span>
+  );
+}
+
+// Image picker for kiosk items: upload a file (POST /kiosk/admin/upload) and
+// preview it. The path can still be typed by hand under "رابط يدوي".
+function KioskImageField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (path: string) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const preview = resolveDashboardImageUrl(value);
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("اختار ملف صورة");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("الصورة أكبر من 5 ميجا");
+      return;
+    }
+    setUploading(true);
+    const body = new FormData();
+    body.append("image", file);
+    const res: any = await fetchHelper({
+      endPoint: "kiosk/admin/upload" as any,
+      method: "POST",
+      body,
+    });
+    setUploading(false);
+    const path = res?.data?.image;
+    if (res?.success && path) {
+      onChange(path);
+      toast.success("اترفعت الصورة");
+    } else {
+      toast.error(res?.result?.message || res?.message || "فشل رفع الصورة");
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <label className="text-xs font-bold text-gray-700">{label}</label>
+      <div className="flex items-center gap-3">
+        <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-dashed border-gray-300 bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
+          {preview ? (
+            <img src={preview} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <span className="text-[10px] text-gray-400">مفيش صورة</span>
+          )}
+        </div>
+        <div className="flex flex-col gap-2">
+          <label className="inline-flex cursor-pointer items-center justify-center rounded-md border px-3 py-1.5 text-xs font-semibold hover:bg-gray-50 dark:hover:bg-gray-800">
+            {uploading ? "جاري الرفع..." : value ? "تغيير الصورة" : "رفع صورة"}
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={uploading}
+              onChange={handleFile}
+            />
+          </label>
+          {value && (
+            <button
+              type="button"
+              className="text-xs text-red-600 hover:underline text-start"
+              onClick={() => onChange("")}
+            >
+              شيل الصورة
+            </button>
+          )}
+        </div>
+      </div>
+      <details className="text-xs text-gray-500">
+        <summary className="cursor-pointer">رابط يدوي</summary>
+        <Input
+          className="mt-1"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="kiosk/category.png"
+        />
+      </details>
     </div>
   );
 }

@@ -7,8 +7,20 @@ type DashboardAxiosRequestConfig = AxiosRequestConfig & {
   skipAuthRedirect?: boolean;
 };
 
-export function buildEndpointUrl(endPoint: endpointType, params?: unknown) {
-  const path = endPoint
+// The Mart and Kiosk pages pass a plain path string ("kiosk/admin/list",
+// `mart/admin/products/${id}`) instead of a key array. `.map` on a string threw
+// before any request was sent, so those pages loaded nothing and saved nothing.
+function stringEndpointPath(endPoint: string): string {
+  const trimmed = endPoint.trim().replace(/^\/+/, "");
+  const known = endpoints[trimmed as endpointName];
+  if (known) return known.startsWith("/") ? known : `/${known}`;
+  return `/api/${trimmed.replace(/^api\//, "")}`;
+}
+
+export function buildEndpointUrl(endPoint: endpointType | string, params?: unknown) {
+  const path = typeof endPoint === "string"
+    ? stringEndpointPath(endPoint)
+    : endPoint
     .map((item: endpointName | number | string, index: number) => {
       if (typeof item === "number" || (!isNaN(Number(item)) && item !== "")) return `/${item}`;
       let val = String(endpoints[item as endpointName] ?? item);
