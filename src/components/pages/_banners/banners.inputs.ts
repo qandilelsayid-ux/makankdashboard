@@ -69,7 +69,8 @@ export const BannersInputs = ({
       apiUrl: ["cities"],
       cardId: "targeting",
       width: 3,
-      label: tr("City", "المدينة")
+      label: tr("City", "المدينة"),
+      required: true,
     },
     {
       name: "storeId",
