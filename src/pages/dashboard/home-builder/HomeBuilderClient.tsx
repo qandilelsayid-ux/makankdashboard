@@ -40,6 +40,9 @@ export default function HomeBuilderClient() {
 
   const [loading, setLoading] = useState(true);
   const [sections, setSections] = useState<AdminHomeSection[]>([]);
+  const [specialSections, setSpecialSections] = useState<AdminHomeSection[]>([]);
+  const [activeTab, setActiveTab] = useState<string>("sections");
+  const [editorPage, setEditorPage] = useState<"HOME" | "SPECIAL_SERVICES">("HOME");
   const [cities, setCities] = useState<any[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
   const [mainBanners, setMainBanners] = useState<any[]>([]);
@@ -82,9 +85,15 @@ export default function HomeBuilderClient() {
 
   const loadAll = useCallback(async () => {
     setLoading(true);
-    const [secRes, cityRes, tplRes, bannerRes, badgeRes, storesRes, qsRes] = await Promise.all([
+    const [secRes, specialSecRes, cityRes, tplRes, bannerRes, badgeRes, storesRes, qsRes] = await Promise.all([
       fetchHelper({
         endPoint: ["homeAdminSections"],
+        method: "GET",
+        redirectOnUnauthorized: false,
+      }),
+      fetchHelper({
+        endPoint: ["homeAdminSections"],
+        params: { page: "SPECIAL_SERVICES" },
         method: "GET",
         redirectOnUnauthorized: false,
       }),
@@ -125,6 +134,7 @@ export default function HomeBuilderClient() {
     ]);
 
     if (Array.isArray(secRes?.data)) setSections(secRes.data);
+    if (Array.isArray(specialSecRes?.data)) setSpecialSections(specialSecRes.data);
     if (Array.isArray(cityRes?.data)) setCities(cityRes.data);
 
     if (Array.isArray(tplRes?.data)) {
@@ -310,6 +320,71 @@ export default function HomeBuilderClient() {
     }
   };
 
+  const handleReorderSpecialSection = async (index: number, delta: -1 | 1) => {
+    const next = moveArrayItem(specialSections, index, delta);
+    if (next === specialSections) return;
+    setSpecialSections(next);
+
+    const res = await fetchHelper({
+      endPoint: ["homeAdminReorder"],
+      method: "PATCH",
+      body: { sectionIds: next.map((s) => s.id) },
+      redirectOnUnauthorized: false,
+    });
+    if (res?.success && Array.isArray(res?.data)) {
+      setSpecialSections(
+        res.data.filter((s: AdminHomeSection) => s.key?.startsWith("special_")),
+      );
+      toast.success(
+        isAr ? "تم حفظ ترتيب أقسام الخدمات الخاصة" : "Special services section order saved",
+      );
+    } else {
+      toast.error(res?.message || "Reorder failed");
+      loadAll();
+    }
+  };
+
+  const handleToggleSpecialSection = async (section: AdminHomeSection) => {
+    setBusyId(section.id);
+    const res = await fetchHelper({
+      endPoint: ["homeAdminSections", section.id, "toggle"],
+      method: "PATCH",
+      redirectOnUnauthorized: false,
+    });
+    setBusyId(null);
+    if (res?.success && res?.data) {
+      setSpecialSections((prev) =>
+        prev.map((s) => (s.id === section.id ? res.data : s)),
+      );
+    } else {
+      toast.error(res?.message || "Toggle failed");
+    }
+  };
+
+  const handleDeleteSpecialSection = async (section: AdminHomeSection) => {
+    if (section.isBuiltIn) return;
+    const confirmed = window.confirm(
+      isAr
+        ? `هل تريد حذف قسم "${getLocalizedText(section.title, locale)}"؟`
+        : `Delete section "${getLocalizedText(section.title, locale)}"?`,
+    );
+    if (!confirmed) return;
+
+    setBusyId(section.id);
+    const res = await fetchHelper({
+      endPoint: ["homeAdminSections", section.id],
+      method: "DELETE",
+      redirectOnUnauthorized: false,
+    });
+    setBusyId(null);
+    if (res?.success) {
+      setSpecialSections((prev) => prev.filter((s) => s.id !== section.id));
+      toast.success(isAr ? "تم حذف القسم" : "Section deleted");
+    } else {
+      toast.error(res?.message || "Delete failed");
+    }
+  };
+
   const handleQuickOrderSwap = async (
     endpointKey: "storeTemplates" | "banners",
     list: any[],
@@ -433,10 +508,11 @@ export default function HomeBuilderClient() {
 
   return (
     <div className="space-y-4">
-      <Tabs defaultValue="sections" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <TabsList>
             <TabsTrigger value="sections">{t("homeTabSections")}</TabsTrigger>
+            <TabsTrigger value="specialServices">{isAr ? "أقسام المندوب والخدمات الخاصة" : "Special Services"}</TabsTrigger>
             <TabsTrigger value="categories">{t("homeTabCategories")}</TabsTrigger>
             <TabsTrigger value="banners">{t("homeTabBanners")}</TabsTrigger>
             <TabsTrigger value="quickServices">{isAr ? "كروت الخدمات السريعة" : "Quick Services"}</TabsTrigger>
@@ -452,11 +528,14 @@ export default function HomeBuilderClient() {
               size="sm"
               onClick={() => {
                 setEditingSection(null);
+                setEditorPage(activeTab === "specialServices" ? "SPECIAL_SERVICES" : "HOME");
                 setEditorOpen(true);
               }}
             >
               <Plus className="h-4 w-4 mr-1" />
-              {t("addSection")}
+              {activeTab === "specialServices"
+                ? (isAr ? "إضافة قسم للخدمات الخاصة" : "Add Special Section")
+                : t("addSection")}
             </Button>
           </div>
         </div>
@@ -550,6 +629,7 @@ export default function HomeBuilderClient() {
                           variant="outline"
                           onClick={() => {
                             setEditingSection(section);
+                            setEditorPage("HOME");
                             setEditorOpen(true);
                           }}
                         >
@@ -563,6 +643,139 @@ export default function HomeBuilderClient() {
                             className="text-destructive"
                             disabled={busyId === section.id}
                             onClick={() => handleDeleteSection(section)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* TAB: SPECIAL SERVICES SECTIONS */}
+        <TabsContent value="specialServices" className="mt-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between gap-2">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Sparkles className="h-5 w-5 text-amber-500" />
+                  {isAr ? "أقسام صفحة المندوب والخدمات الخاصة" : "Special Services Page Sections"}
+                </CardTitle>
+                <CardDescription>
+                  {isAr
+                    ? "التحكم في الأقسام التي تظهر أسفل كروت المندوب الثابتة (بانرات، عروض، كرت الشحن، ومزايا الثقة). يمكنك إعادة الترتيب والإخفاء والإضافة بكل حرية."
+                    : "Manage sections displayed below the fixed courier cards (banners, offers, shipping card, trust badges). Reorder, toggle visibility, or add new sections."}
+                </CardDescription>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setEditingSection(null);
+                  setEditorPage("SPECIAL_SERVICES");
+                  setEditorOpen(true);
+                }}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                {isAr ? "إضافة قسم للخدمات الخاصة" : "Add Special Section"}
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {loading && specialSections.length === 0 ? (
+                <div className="py-12 flex justify-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : specialSections.length === 0 ? (
+                <div className="py-12 text-center text-muted-foreground">
+                  {isAr ? "لا توجد أقسام حالياً. اضغط تحديث أو أضف قسماً جديداً." : "No sections found. Click refresh or add a new section."}
+                </div>
+              ) : (
+                specialSections.map((section, idx) => {
+                  const meta = SECTION_TYPE_META[section.type];
+                  return (
+                    <div
+                      key={section.id}
+                      className={`flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-lg border transition-colors ${
+                        section.isActive
+                          ? "bg-card"
+                          : "bg-muted/40 opacity-75"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="flex flex-col gap-0.5 shrink-0">
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            className="h-7 w-7"
+                            disabled={idx === 0}
+                            onClick={() => handleReorderSpecialSection(idx, -1)}
+                          >
+                            <ArrowUp className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            className="h-7 w-7"
+                            disabled={idx === specialSections.length - 1}
+                            onClick={() => handleReorderSpecialSection(idx, 1)}
+                          >
+                            <ArrowDown className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+
+                        <div className="w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm flex items-center justify-center shrink-0">
+                          {idx + 1}
+                        </div>
+
+                        <div className="min-w-0 space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-semibold text-base">
+                              {getLocalizedText(section.title, locale)}
+                            </span>
+                            <Badge variant="secondary" className={meta?.colorClass}>
+                              {meta?.[isAr ? "ar" : "en"] || section.type}
+                            </Badge>
+                            <Badge variant="outline">
+                              {section.City
+                                ? getLocalizedText(section.City.name, locale)
+                                : t("allCitiesGlobal")}
+                            </Badge>
+                            <Badge variant="outline" className="text-[11px]">
+                              {section.isBuiltIn ? t("builtInSection") : t("customSection")}
+                            </Badge>
+                          </div>
+                          <div>{renderSectionSummary(section)}</div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Switch
+                          checked={section.isActive}
+                          disabled={busyId === section.id}
+                          onCheckedChange={() => handleToggleSpecialSection(section)}
+                        />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setEditingSection(section);
+                            setEditorPage("SPECIAL_SERVICES");
+                            setEditorOpen(true);
+                          }}
+                        >
+                          <Edit3 className="h-4 w-4 mr-1" />
+                          {isAr ? "تعديل" : "Edit"}
+                        </Button>
+                        {!section.isBuiltIn && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="text-destructive"
+                            disabled={busyId === section.id}
+                            onClick={() => handleDeleteSpecialSection(section)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -1077,6 +1290,7 @@ export default function HomeBuilderClient() {
         onOpenChange={setEditorOpen}
         editingSection={editingSection}
         cities={cities}
+        defaultPage={editorPage}
         onSaved={loadAll}
       />
     </div>

@@ -46,6 +46,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   editingSection: AdminHomeSection | null;
   cities: any[];
+  defaultPage?: string;
   onSaved: () => void;
 }
 
@@ -54,6 +55,7 @@ export default function SectionEditorDialog({
   onOpenChange,
   editingSection,
   cities,
+  defaultPage,
   onSaved,
 }: Props) {
   const t = useTranslations();
@@ -284,6 +286,11 @@ export default function SectionEditorDialog({
           : null,
       cityId: cityId === "ALL" ? null : Number(cityId),
       isActive,
+      page:
+        editingSection?.key?.startsWith("special_") ||
+        defaultPage === "SPECIAL_SERVICES"
+          ? "SPECIAL_SERVICES"
+          : "HOME",
       headerBannerImage: headerBannerImage || null,
     };
 
