@@ -11,9 +11,10 @@ export default async function page(): Promise<JSX.Element> {
       <CustomHeader />
       <CategoryFilter className="flex-1 flex-wrap" />
       <OrdersViewTabs
-        tableTitle={t("martOrders") || "طلبات المارت والكشك (Mart & Kiosk Orders)"}
+        tableTitle={t("martOrders") || "طلبات المارت"}
         endPoint={["orders"]}
-        defaultParams={{ onlyMartKiosk: true }}
+        defaultParams={{ onlyMart: true }}
+        refetchInterval={30_000}
       />
     </>
   );

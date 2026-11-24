@@ -71,6 +71,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   });
   const pendingReservationsCount = (pendingReservationsQuery.data as any)?.data?.pendingCount ?? 0;
 
+  // Mart / Kiosk orders waiting for the admin. Counted on the server from the
+  // DB (not from a loaded page), so refetching never double-counts an order.
+  const martKioskPendingQuery = useQuery({
+    queryKey: ["martKioskPendingCount"],
+    queryFn: () => fetchHelper({ endPoint: ["orders", "martKioskPending"], redirectOnUnauthorized: false }),
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+    retry: false
+  });
+  const martKiosk = (martKioskPendingQuery.data as any)?.data ?? {};
+  const counts = {
+    pendingReservationsCount,
+    martPendingCount: Number(martKiosk.mart) || 0,
+    kioskPendingCount: Number(martKiosk.kiosk) || 0
+  };
+
   const filterLink = useMemo(() => {
     const profile = profileQuery.data?.data?.user;
     const isSuperAdmin =
@@ -83,18 +99,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         // newer pages even before their permission rows are seeded in the DB.
         return links({
           permissions: { ...permissionsQuery.data, loyalty: { get: true } } as unknown as Permission,
-          pendingReservationsCount
+          ...counts
         });
       }
-      return links({ permissions: FALLBACK_SIDEBAR_PERMISSIONS, pendingReservationsCount });
+      return links({ permissions: FALLBACK_SIDEBAR_PERMISSIONS, ...counts });
     }
 
     if (permissionsQuery.data) {
-      return links({ permissions: permissionsQuery.data, pendingReservationsCount });
+      return links({ permissions: permissionsQuery.data, ...counts });
     }
 
     return [];
-  }, [permissionsQuery.data, profileQuery.data, pendingReservationsCount]);
+  }, [permissionsQuery.data, profileQuery.data, pendingReservationsCount, counts.martPendingCount, counts.kioskPendingCount]);
   const profile = profileQuery.data?.data?.user;
 
   return (

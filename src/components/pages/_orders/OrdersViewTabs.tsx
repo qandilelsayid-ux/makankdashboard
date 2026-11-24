@@ -14,6 +14,8 @@ type OrdersViewTabsProps = {
   filters?: FormInput[];
   endPoint?: (string | number)[];
   defaultParams?: Record<string, unknown>;
+  // Poll the list (ms). Used by the Mart / Kiosk pages so new orders show up.
+  refetchInterval?: number;
 };
 
 const getDefaultFilters = (t: ReturnType<typeof useTranslations>): FormInput[] => [
@@ -80,6 +82,7 @@ export default function OrdersViewTabs({
   filters,
   endPoint = ["orders"],
   defaultParams,
+  refetchInterval,
 }: OrdersViewTabsProps) {
   const t = useTranslations();
   const searchParams = useSearchParams();
@@ -106,7 +109,7 @@ export default function OrdersViewTabs({
   }
 
   const queryKey = [endPoint.join("/"), JSON.stringify(params)];
-  const { data: response } = useApiQuery({ queryKey, endPoint, params, staleTime: 0 });
+  const { data: response } = useApiQuery({ queryKey, endPoint, params, staleTime: 0, refetchInterval });
 
   // Fetch active cities to display dynamic city selector boxes/tabs
   const { data: citiesResponse } = useApiQuery({

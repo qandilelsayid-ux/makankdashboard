@@ -1,4 +1,23 @@
-export const links = ({ permissions, pendingReservationsCount }: { permissions: Permission; pendingReservationsCount?: number }): NavItem[] => {
+// Red number next to a sidebar link (hidden at 0).
+const countBadge = (count?: number) =>
+  count && count > 0 ? (
+    <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold text-white bg-red-500 rounded-full animate-pulse">
+      {count > 99 ? "99+" : count}
+    </span>
+  ) : undefined;
+
+export const links = ({
+  permissions,
+  pendingReservationsCount,
+  martPendingCount,
+  kioskPendingCount
+}: {
+  permissions: Permission;
+  pendingReservationsCount?: number;
+  // Mart / Kiosk orders waiting for the admin (PENDING).
+  martPendingCount?: number;
+  kioskPendingCount?: number;
+}): NavItem[] => {
   return (
     [
 
@@ -181,7 +200,13 @@ export const links = ({ permissions, pendingReservationsCount }: { permissions: 
           },
           (permissions?.Orders?.get || permissions?.orders?.get) && {
             title: "martOrders",
-            url: "/mart-orders"
+            url: "/mart-orders",
+            info: countBadge(martPendingCount)
+          },
+          (permissions?.Orders?.get || permissions?.orders?.get) && {
+            title: "kioskOrders",
+            url: "/kiosk-orders",
+            info: countBadge(kioskPendingCount)
           },
           (permissions?.Orders?.get || permissions?.orders?.get) && {
             title: "archivedOrders",

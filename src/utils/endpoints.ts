@@ -165,6 +165,7 @@ export const endpoints = {
   tableReservations: "/api/table-reservations",
   tableReservationsAdmin: "/admin",
   tableReservationsPendingCount: "/admin/pending-count",
+  martKioskPending: "/statistics/mart-kiosk-pending",
   serviceSchedules: "/api/service-schedules",
   governorateShipping: "/api/governorate-shipping",
   govShippingAdmin: "/admin",
