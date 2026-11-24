@@ -57,6 +57,8 @@ interface CustomZoneItem {
   storeDeliveryPrice?: number | null;
   price: number | null;
   priceAfterDiscount?: number | null;
+  // Does this courier run in the zone? (false = customers can't order there)
+  enabled?: boolean;
 }
 
 interface CustomDeliveryPricesResponse {
@@ -97,6 +99,8 @@ export default function CustomDeliveryZonePricingTab({ scope = "custom" }: { sco
   const [defaultPriceInput, setDefaultPriceInput] = useState<string>("");
   const [editedPrices, setEditedPrices] = useState<Record<number, string>>({});
   const [editedDiscountPrices, setEditedDiscountPrices] = useState<Record<number, string>>({});
+  // Coverage per zone, separate from the price.
+  const [enabledZones, setEnabledZones] = useState<Record<number, boolean>>({});
 
   // Quick Uniform Tools
   const [uniformPriceInput, setUniformPriceInput] = useState<string>("");
@@ -124,6 +128,7 @@ export default function CustomDeliveryZonePricingTab({ scope = "custom" }: { sco
       });
       setEditedPrices(prices);
       setEditedDiscountPrices(discounts);
+      setEnabledZones(Object.fromEntries(rawZones.map((z) => [z.zoneId, z.enabled !== false])));
     }
   }, [rawData, rawZones, serverDefaultPrice]);
 
@@ -169,6 +174,7 @@ export default function CustomDeliveryZonePricingTab({ scope = "custom" }: { sco
   }, [rawZones, editedPrices]);
 
   const defaultPricedCount = Math.max(0, rawZones.length - customPricedCount);
+  const closedZonesCount = rawZones.filter((z) => enabledZones[z.zoneId] === false).length;
 
   // Handlers
   const handleApplyUniformPrice = () => {
@@ -228,6 +234,7 @@ export default function CustomDeliveryZonePricingTab({ scope = "custom" }: { sco
           zoneId: z.zoneId,
           price,
           priceAfterDiscount: price != null ? priceAfterDiscount : null,
+          enabled: enabledZones[z.zoneId] !== false,
         };
       });
 
@@ -466,6 +473,11 @@ export default function CustomDeliveryZonePricingTab({ scope = "custom" }: { sco
           <Badge variant="outline" className="border-muted-foreground/30 text-muted-foreground">
             {locale === "ar" ? `بالسعر الافتراضي: ${defaultPricedCount}` : `Default: ${defaultPricedCount}`}
           </Badge>
+          {closedZonesCount > 0 && (
+            <Badge variant="outline" className="border-destructive/30 text-destructive bg-destructive/5">
+              {ar ? `مناطق مقفولة للعملاء: ${closedZonesCount}` : `Closed zones: ${closedZonesCount}`}
+            </Badge>
+          )}
 
           {selectedCityId !== "all" && (() => {
             const selectedCity = citiesList.find((c: any) => String(c.id) === selectedCityId);
@@ -516,13 +528,14 @@ export default function CustomDeliveryZonePricingTab({ scope = "custom" }: { sco
               <TableHead className="w-44 text-center">{ar ? `سعر ${serviceName}` : `${serviceName} Price`}</TableHead>
               <TableHead className="w-44 text-center">{locale === "ar" ? "السعر بعد الخصم (اختياري)" : "Price After Discount"}</TableHead>
               <TableHead className="text-center">{locale === "ar" ? "حالة التسعير" : "Status"}</TableHead>
+              <TableHead className="text-center">{ar ? "متاح للعملاء" : "Available"}</TableHead>
               <TableHead className="w-16 text-center"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredZones.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
+                <TableCell colSpan={9} className="text-center py-10 text-muted-foreground">
                   {locale === "ar" ? "لا توجد مناطق مطابقة للبحث." : "No zones match the filter."}
                 </TableCell>
               </TableRow>
@@ -532,9 +545,13 @@ export default function CustomDeliveryZonePricingTab({ scope = "custom" }: { sco
                 const currentPrice = editedPrices[z.zoneId] ?? "";
                 const currentDiscount = editedDiscountPrices[z.zoneId] ?? "";
                 const hasCustomPrice = currentPrice !== "" && Number(currentPrice) > 0;
+                const isEnabled = enabledZones[z.zoneId] !== false;
 
                 return (
-                  <TableRow key={z.zoneId} className={hasCustomPrice ? "bg-primary/2" : ""}>
+                  <TableRow
+                    key={z.zoneId}
+                    className={!isEnabled ? "opacity-60" : hasCustomPrice ? "bg-primary/2" : ""}
+                  >
                     <TableCell className="text-center text-xs text-muted-foreground font-mono">
                       {idx + 1}
                     </TableCell>
@@ -624,6 +641,22 @@ export default function CustomDeliveryZonePricingTab({ scope = "custom" }: { sco
                             : ar ? "بالسعر الافتراضي" : "Default Rate"}
                         </Badge>
                       )}
+                    </TableCell>
+
+                    {/* Coverage: can customers order this courier here? */}
+                    <TableCell className="text-center">
+                      <div className="flex flex-col items-center gap-1">
+                        <Switch
+                          checked={isEnabled}
+                          onCheckedChange={(checked) =>
+                            setEnabledZones((prev) => ({ ...prev, [z.zoneId]: checked }))
+                          }
+                          aria-label={ar ? `${serviceName} في ${getZoneName(z.name)}` : `${serviceName} in zone`}
+                        />
+                        <span className={`text-[10px] font-semibold ${isEnabled ? "text-green-600" : "text-destructive"}`}>
+                          {isEnabled ? (ar ? "متاح" : "On") : ar ? "مقفول" : "Off"}
+                        </span>
+                      </div>
                     </TableCell>
 
                     {/* Reset Button */}
