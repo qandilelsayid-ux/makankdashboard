@@ -5,6 +5,7 @@ import type { AxiosRequestConfig } from "axios";
 
 type DashboardAxiosRequestConfig = AxiosRequestConfig & {
   skipAuthRedirect?: boolean;
+  skipErrorToast?: boolean;
 };
 
 // The Mart and Kiosk pages pass a plain path string ("kiosk/admin/list",
@@ -44,7 +45,8 @@ export async function request<T = unknown>({
   params,
   headers,
   isLocalized,
-  redirectOnUnauthorized
+  redirectOnUnauthorized,
+  silent
 }: {
   endPoint: endpointType;
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -53,6 +55,8 @@ export async function request<T = unknown>({
   headers?: Record<string, string>;
   isLocalized?: boolean;
   redirectOnUnauthorized?: boolean;
+  // Background requests (sidebar counters): no error toast on failure.
+  silent?: boolean;
 }) {
   if (!apiClient.defaults.baseURL) {
     throw new Error(
@@ -66,6 +70,7 @@ export async function request<T = unknown>({
     method,
     data: body,
     skipAuthRedirect: redirectOnUnauthorized === false,
+    skipErrorToast: silent === true,
     headers: {
       ...(isFormData ? { "Content-Type": undefined } : {}),
       isLocalized: isLocalized ? "true" : "false",

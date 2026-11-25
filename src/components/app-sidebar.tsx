@@ -75,7 +75,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // DB (not from a loaded page), so refetching never double-counts an order.
   const martKioskPendingQuery = useQuery({
     queryKey: ["martKioskPendingCount"],
-    queryFn: () => fetchHelper({ endPoint: ["orders", "martKioskPending"], redirectOnUnauthorized: false }),
+    // Silent: a backend that doesn't have this count yet must not toast every 30s.
+    queryFn: () => fetchHelper({ endPoint: ["orders", "martKioskPending"], redirectOnUnauthorized: false, silent: true }),
     staleTime: 30_000,
     refetchInterval: 30_000,
     retry: false

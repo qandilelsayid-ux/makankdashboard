@@ -9,7 +9,8 @@ export async function fetchHelper<T = any>({
   headers,
   params,
   isLocalized,
-  redirectOnUnauthorized = true
+  redirectOnUnauthorized = true,
+  silent
 }: {
   isLocalized?: boolean;
   headers?: Record<string, string>;
@@ -23,6 +24,7 @@ export async function fetchHelper<T = any>({
   params?: any;
   refreshToken?: boolean;
   redirectOnUnauthorized?: boolean;
+  silent?: boolean;
 }): Promise<ApiResponse<T>> {
   try {
     const result = await request<ApiResponse<T>>({
@@ -32,7 +34,8 @@ export async function fetchHelper<T = any>({
       headers,
       params,
       isLocalized,
-      redirectOnUnauthorized
+      redirectOnUnauthorized,
+      silent
     });
 
     return {

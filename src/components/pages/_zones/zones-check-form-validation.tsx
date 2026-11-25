@@ -12,7 +12,9 @@ import { ZonesSchema } from "./zones.schema";
       }
       return count + 1; // Single input
     }, 0);
-  if (inputCount !== Object.keys(schema.shape).length) {
+  // `coordinates` stays in the schema (optional) since the map input was removed.
+  const schemaFields = Object.keys(schema.shape).filter((k) => k !== "coordinates");
+  if (inputCount !== schemaFields.length) {
     throw new Error("Inputs and schema do not match");
   }
   }

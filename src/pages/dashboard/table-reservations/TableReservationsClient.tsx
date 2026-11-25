@@ -40,7 +40,6 @@ import {
   Phone,
   Search,
   Store,
-  Phone,
   User,
   Users,
   UtensilsCrossed,
