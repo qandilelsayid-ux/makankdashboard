@@ -1033,7 +1033,7 @@ export default function MartClient() {
   return (
     <div className="space-y-6">
       {/* City Switcher & Header Controls */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white dark:bg-zinc-900 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-zinc-800">
+      <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 bg-white dark:bg-zinc-900 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-zinc-800">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
             <ShoppingCart className="h-5 w-5" />
@@ -1048,7 +1048,7 @@ export default function MartClient() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
           <span className="text-sm font-medium text-gray-600 dark:text-gray-300 whitespace-nowrap">
             المدينة:
           </span>
@@ -1098,7 +1098,7 @@ export default function MartClient() {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex gap-2 border-b border-gray-200 dark:border-zinc-800 overflow-x-auto pb-1">
+      <div className="flex flex-wrap gap-2 border-b border-gray-200 dark:border-zinc-800 pb-1">
         {[
           { key: "store", label: "إعدادات المارت", icon: Store },
           { key: "departments", label: "الأقسام والفئات", icon: Layers },

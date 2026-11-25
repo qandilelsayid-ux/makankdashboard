@@ -69,7 +69,11 @@ export default function SelectPaginated({
   );
   const getOptionLabel = useCallback(
     (item: ApiResponseItem) => {
-      if (labelFormat === "storeBranch") {
+      // Branch lists default to "Store (Branch)": most branches are just named
+      // "الفرع الرئيسي", so the branch name alone can't tell stores apart.
+      const effectiveFormat =
+        labelFormat ?? (apiUrl?.[0] === "branches" ? "storeBranch" : undefined);
+      if (effectiveFormat === "storeBranch") {
         const store = item.Store || item.store;
         const storeName = getLocalizedText(store?.name);
         const branchName = getLocalizedText(item.name);

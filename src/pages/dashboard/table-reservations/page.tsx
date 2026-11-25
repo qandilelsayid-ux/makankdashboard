@@ -8,7 +8,7 @@ export default async function TableReservationsPage(): Promise<JSX.Element> {
   return (
     <>
       <CustomHeader />
-      <div className="grid gap-6 p-4 md:p-6">
+      <div className="grid grid-cols-1 gap-6 p-4 md:p-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
             <span>🍽️</span>

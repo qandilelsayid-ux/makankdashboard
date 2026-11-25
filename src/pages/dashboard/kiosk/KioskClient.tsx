@@ -591,7 +591,7 @@ export default function KioskClient() {
   return (
     <div className="space-y-6 p-4 md:p-6" dir="rtl">
       {/* ── HEADER ── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-bold">
             <Store className="h-6 w-6" />
@@ -657,7 +657,7 @@ export default function KioskClient() {
       </div>
 
       {/* ── NAVIGATION TABS ── */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+      <div className="flex flex-wrap items-center gap-2 pb-1">
         <Button
           variant={activeTab === "categories" ? "default" : "outline"}
           size="sm"
