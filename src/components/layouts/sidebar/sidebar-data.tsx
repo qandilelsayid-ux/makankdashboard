@@ -221,7 +221,7 @@ export const links = ({
               </span>
             ) : undefined
           },
-          (permissions?.Orders?.get || permissions?.orders?.get) && {
+          (permissions?.Orders?.get || permissions?.orders?.get || permissions?.["governorate-shipping"]?.get) && {
             title: "governorateShipping",
             url: "/governorate-shipping"
           },
