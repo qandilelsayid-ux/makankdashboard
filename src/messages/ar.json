@@ -3548,5 +3548,11 @@
   "Wallet number": "رقم المحفظة",
   "Wallet type": "نوع المحفظة",
   "Weekly templates": "القوالب الأسبوعية",
-  "e.g. Vodafone Cash / InstaPay": "مثال: فودافون كاش / إنستاباي"
+  "e.g. Vodafone Cash / InstaPay": "مثال: فودافون كاش / إنستاباي",
+  "Booked": "المحجوز",
+  "Capacity": "السعة",
+  "DATE": "تاريخ",
+  "PLACE": "مكان",
+  "SELECT": "اختيار من متعدد",
+  "TEXT": "نص"
 }
