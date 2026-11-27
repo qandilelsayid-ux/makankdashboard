@@ -31,7 +31,7 @@ export const routeResultCache = new Map();
 
 function LoadingRoute() {
   const location = useLocation();
-  const isDashboardRoute = /^\/(?:ar|en)\/(dashboard|kiosk|mart|mart-orders|kiosk-orders|logs|stores|orders|zones|branches|services|category|coupons|offers|banners|home-builder|special-delivery-banners|modules|schedule|users|employees|customers|roles|permissions|fund|transactions|withdraw|complaint|socialMedia|rating|delivery|settings|profile|customer-categories|store-templates|analytics|notifications|partner-settlements|loyalty|table-reservations|service-schedules)(?:\/|$)/.test(location.pathname);
+  const isDashboardRoute = /^\/(?:ar|en)\/(dashboard|kiosk|mart|mart-orders|kiosk-orders|logs|stores|orders|zones|branches|services|category|coupons|offers|banners|home-builder|special-delivery-banners|modules|schedule|users|employees|customers|roles|permissions|fund|transactions|withdraw|complaint|socialMedia|rating|delivery|settings|profile|customer-categories|store-templates|analytics|notifications|partner-settlements|loyalty|table-reservations|service-schedules|booking-categories|booking-places|booking-items|booking-fields|booking-slots|booking-banners|booking-payment-settings|booking-reviews|bookings)(?:\/|$)/.test(location.pathname);
 
   if (isDashboardRoute) {
     return <DashboardLoading />;
@@ -344,3 +344,4 @@ export const router = createBrowserRouter([
     element: <Navigate to="/ar/dashboard" replace />,
   },
 ]);
+

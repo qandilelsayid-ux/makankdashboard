@@ -178,6 +178,28 @@ export const endpoints = {
   govShippingDrivers: "/drivers",
   govShippingAssignDriver: "/assign-driver",
   govShippingStatus: "/status",
+  bookingCategories: "/api/booking-categories",
+  bookingPlaces: "/api/booking-places",
+  bookingItems: "/api/booking-items",
+  bookingFields: "/api/booking-fields",
+  bookingSlots: "/api/booking-slots",
+  bookingSlotClose: "/close",
+  bookingSlotOpen: "/open",
+  bookingSlotTemplates: "/api/booking-slot-templates",
+  bookingSlotTemplatesGenerate: "/generate",
+  bookingBanners: "/api/booking-banners",
+  bookingPaymentSettings: "/api/booking-payment-settings",
+  bookings: "/api/bookings",
+  bookingsAdmin: "/admin",
+  bookingsPendingCount: "/admin/pending-count",
+  bookingApprove: "/approve",
+  bookingReject: "/reject",
+  bookingComplete: "/complete",
+  bookingCancel: "/cancel",
+  bookingRefunded: "/refunded",
+  bookingReviews: "/api/booking-reviews",
+  bookingReviewHide: "/hide",
+  bookingReviewShow: "/show",
   homeLayout: "/api/home/layout",
   homeAdminSections: "/api/home/admin/sections",
   homeAdminReorder: "/api/home/admin/sections/reorder",
@@ -222,3 +244,4 @@ export const tags = {
 };
 
 export type Tags = keyof typeof tags;
+

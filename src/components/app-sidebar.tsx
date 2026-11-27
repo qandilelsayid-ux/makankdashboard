@@ -44,7 +44,15 @@ const FALLBACK_SIDEBAR_PERMISSIONS = {
   transactions: { get: true },
   wallet: { get: true },
   loyalty: { get: true },
-  settings: { get: true }
+  settings: { get: true },
+  bookings: { get: true },
+  "booking-categories": { get: true },
+  "booking-places": { get: true },
+  "booking-items": { get: true },
+  "booking-slots": { get: true },
+  "booking-fields": { get: true },
+  "booking-banners": { get: true },
+  "booking-payment-settings": { get: true }
 } as unknown as Permission;
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -71,6 +79,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   });
   const pendingReservationsCount = (pendingReservationsQuery.data as any)?.data?.pendingCount ?? 0;
 
+  const pendingBookingsQuery = useQuery({
+    queryKey: ["bookingsPendingCount"],
+    queryFn: () => fetchHelper({ endPoint: ["bookings", "bookingsPendingCount"], redirectOnUnauthorized: false, silent: true }),
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+    retry: false
+  });
+  const pendingBookingsCount = (pendingBookingsQuery.data as any)?.data?.pendingCount ?? 0;
+
   // Mart / Kiosk orders waiting for the admin. Counted on the server from the
   // DB (not from a loaded page), so refetching never double-counts an order.
   const martKioskPendingQuery = useQuery({
@@ -84,6 +101,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const martKiosk = (martKioskPendingQuery.data as any)?.data ?? {};
   const counts = {
     pendingReservationsCount,
+    pendingBookingsCount,
     martPendingCount: Number(martKiosk.mart) || 0,
     kioskPendingCount: Number(martKiosk.kiosk) || 0
   };
@@ -99,7 +117,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         // The super admin bypasses permission checks on the API, so always show
         // newer pages even before their permission rows are seeded in the DB.
         return links({
-          permissions: { ...permissionsQuery.data, loyalty: { get: true } } as unknown as Permission,
+          permissions: { ...permissionsQuery.data, loyalty: { get: true }, bookings: { get: true }, "booking-categories": { get: true }, "booking-places": { get: true }, "booking-items": { get: true }, "booking-slots": { get: true }, "booking-fields": { get: true }, "booking-banners": { get: true }, "booking-payment-settings": { get: true } } as unknown as Permission,
           ...counts
         });
       }
@@ -111,7 +129,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
 
     return [];
-  }, [permissionsQuery.data, profileQuery.data, pendingReservationsCount, counts.martPendingCount, counts.kioskPendingCount]);
+  }, [permissionsQuery.data, profileQuery.data, pendingReservationsCount, pendingBookingsCount, counts.martPendingCount, counts.kioskPendingCount]);
   const profile = profileQuery.data?.data?.user;
 
   return (
@@ -133,3 +151,4 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     </Sidebar>
   );
 }
+

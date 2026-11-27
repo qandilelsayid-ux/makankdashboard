@@ -9,11 +9,13 @@ const countBadge = (count?: number) =>
 export const links = ({
   permissions,
   pendingReservationsCount,
+  pendingBookingsCount,
   martPendingCount,
   kioskPendingCount
 }: {
   permissions: Permission;
   pendingReservationsCount?: number;
+  pendingBookingsCount?: number;
   // Mart / Kiosk orders waiting for the admin (PENDING).
   martPendingCount?: number;
   kioskPendingCount?: number;
@@ -232,6 +234,51 @@ export const links = ({
         ].filter(Boolean)
       },
 
+      (permissions?.bookings?.get ||
+        permissions?.["booking-categories"]?.get ||
+        permissions?.["booking-places"]?.get) && {
+        title: "Bookings",
+        items: [
+          permissions?.bookings?.get && {
+            title: "Booking Requests",
+            url: "/bookings",
+            info: countBadge(pendingBookingsCount)
+          },
+          permissions?.["booking-categories"]?.get && {
+            title: "Booking Categories",
+            url: "/booking-categories"
+          },
+          permissions?.["booking-places"]?.get && {
+            title: "Booking Places",
+            url: "/booking-places"
+          },
+          permissions?.["booking-items"]?.get && {
+            title: "Booking Items",
+            url: "/booking-items"
+          },
+          permissions?.["booking-slots"]?.get && {
+            title: "Booking Slots",
+            url: "/booking-slots"
+          },
+          permissions?.["booking-fields"]?.get && {
+            title: "Booking Fields",
+            url: "/booking-fields"
+          },
+          permissions?.["booking-banners"]?.get && {
+            title: "Booking Banners",
+            url: "/booking-banners"
+          },
+          permissions?.["booking-payment-settings"]?.get && {
+            title: "Booking Payment Settings",
+            url: "/booking-payment-settings"
+          },
+          permissions?.bookings?.get && {
+            title: "Booking Reviews",
+            url: "/booking-reviews"
+          }
+        ].filter(Boolean)
+      },
+
       (permissions?.withdraw?.get ||
         permissions?.fund?.get ||
         permissions?.transactions?.get ||
@@ -298,3 +345,4 @@ export const links = ({
       .filter(Boolean) as NavItem[]
   ).filter(Boolean) as NavItem[]; // Filter out any undefined values
 };
+

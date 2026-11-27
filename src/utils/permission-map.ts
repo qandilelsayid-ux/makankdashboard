@@ -43,7 +43,16 @@ export const routePermissionMap: Record<string, string> = {
   "store-block": "block store",
   "sub-categories": "Sub Categories",
   "store-commission": "Store Commission",
-  rating: "Rating"
+  rating: "Rating",
+  "booking-categories": "booking-categories",
+  "booking-places": "booking-places",
+  "booking-items": "booking-items",
+  "booking-fields": "booking-fields",
+  "booking-slots": "booking-slots",
+  "booking-banners": "booking-banners",
+  "booking-payment-settings": "booking-payment-settings",
+  "booking-reviews": "bookings",
+  bookings: "bookings"
 };
 
 export function resolvePermissionKeyFromPath(pathname: string): string | undefined {
@@ -51,3 +60,4 @@ export function resolvePermissionKeyFromPath(pathname: string): string | undefin
   const routeSegment = segments[1];
   return routeSegment ? routePermissionMap[routeSegment] : undefined;
 }
+
