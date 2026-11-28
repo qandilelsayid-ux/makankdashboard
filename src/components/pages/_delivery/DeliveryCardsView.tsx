@@ -14,8 +14,8 @@ import {
   DialogTrigger
 } from "@/components/ui/dialog";
 import { Link } from "@/lib/navigation";
-import { IdCard, Mail, PackageCheck, PackageX, Phone, Trash2, UserRound, View } from "lucide-react";
-import { useTranslations } from "@/lib/i18n";
+import { IdCard, Mail, MapPin, PackageCheck, PackageX, Phone, Trash2, UserRound, View } from "lucide-react";
+import { useLocale, useTranslations } from "@/lib/i18n";
 import { usePathname, useRouter } from "@/lib/navigation";
 import { getEnv } from "@/lib/env";
 import { useState } from "react";
@@ -113,6 +113,9 @@ function DeleteDeliveryButton({ id }: { id: string }) {
 
 export default function DeliveryCardsView({ deliveries }: { deliveries: DeliveryCardItem[] }) {
   const t = useTranslations();
+  const locale = useLocale();
+  const cityLabel = (c: any): string =>
+    !c ? "" : typeof c.name === "string" ? c.name : c.name?.[locale] ?? c.name?.ar ?? c.name?.en ?? "";
 
   const { data: profileQuery } = useQuery({
     queryKey: ["profile"],
@@ -202,6 +205,12 @@ export default function DeliveryCardsView({ deliveries }: { deliveries: Delivery
                     <span className="flex items-center justify-center gap-2">
                       <Phone className="h-4 w-4 shrink-0" />
                       <span dir="ltr">{delivery.phone || "-"}</span>
+                    </span>
+                    <span className="flex items-center justify-center gap-2">
+                      <MapPin className="h-4 w-4 shrink-0" />
+                      <span className="truncate" dir="auto">
+                        {cityLabel(delivery.City) || (locale === "ar" ? "بدون مدينة" : "No city")}
+                      </span>
                     </span>
                   </div>
                 </div>

@@ -18,6 +18,7 @@ import { useLocale, useTranslations } from "@/lib/i18n";
 import { apiClient } from "@/lib/axios";
 import { queryClient } from "@/lib/queryClient";
 import { toast } from "sonner";
+import CitySelector from "@/components/shared/CitySelector";
 
 export interface EditDriverModalProps {
   driver: {
@@ -35,6 +36,9 @@ export interface EditDriverModalProps {
     availableNow?: boolean;
     forceAvailable?: boolean;
     isAvailable?: boolean;
+    cityId?: number | null;
+    // Object from the API (typed as an array in some callers).
+    DeliveryDetails?: any;
   };
   trigger?: React.ReactNode;
 }
@@ -54,6 +58,10 @@ export default function EditDriverModal({ driver, trigger }: EditDriverModalProp
   const [isActive, setIsActive] = useState<boolean>(Boolean(driver.isActive ?? driver.active ?? true));
   const [isVerified, setIsVerified] = useState<boolean>(Boolean(driver.isVerified ?? driver.verified ?? false));
   const [forceAvailable, setForceAvailable] = useState<boolean>(Boolean(driver.isAvailable ?? driver.forceAvailable ?? false));
+  // The city this driver works in (a city admin only sees its own drivers).
+  const [cityId, setCityId] = useState<number | null>(
+    (Array.isArray(driver.DeliveryDetails) ? driver.DeliveryDetails[0] : driver.DeliveryDetails)?.cityId ?? driver.cityId ?? null
+  );
   const [availableNow, setAvailableNow] = useState<boolean>(Boolean(driver.availableNow ?? driver.isOnShift ?? false));
 
   // Password State
@@ -84,7 +92,9 @@ export default function EditDriverModal({ driver, trigger }: EditDriverModalProp
       active: isActive,
       verified: isVerified,
       forceAvailable,
-      availableNow
+      availableNow,
+      // 0 = no city (null is dropped by the API validator).
+      cityId: cityId ?? 0
     };
 
     if (password) {
@@ -225,6 +235,24 @@ export default function EditDriverModal({ driver, trigger }: EditDriverModalProp
                   className="h-10 text-xs font-mono rounded-xl bg-background/50 focus:bg-background transition-all"
                 />
               </div>
+            </div>
+
+            {/* Driver city */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-foreground">
+                {isAr ? "مدينة المندوب" : "Driver city"}
+              </Label>
+              <CitySelector
+                value={cityId}
+                onChange={(id) => setCityId(id)}
+                allCitiesLabel={isAr ? "بدون مدينة" : "No city"}
+                className="h-10 w-full"
+              />
+              <p className="text-[11px] text-muted-foreground/80">
+                {isAr
+                  ? "أدمن المدينة هيشوف المندوب ده ويقدر يسند له طلبات لو في مدينته بس."
+                  : "A city admin only sees and assigns drivers of their own city."}
+              </p>
             </div>
 
             {/* Change Password Section */}

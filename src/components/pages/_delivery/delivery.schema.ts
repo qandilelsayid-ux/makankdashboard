@@ -12,7 +12,8 @@
     name:StringReq(t),
 email:StringNotReq(),
 phone:noSchema(),
-password:noSchema()
+password:noSchema(),
+cityId: z.union([z.number(), z.string()]).optional().nullable()
 })
   };
 

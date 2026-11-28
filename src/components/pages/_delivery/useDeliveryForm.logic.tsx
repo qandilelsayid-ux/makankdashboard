@@ -28,7 +28,12 @@ export default function useDeliveryLogic({ data }: { data?: DeliveryType }) {
   const onSubmit = async (formData: DeliveryType) => {
     await formAction({
       data,
-      formData: extractFormNameInputs({ inputs, data: formData }),
+      formData: (() => {
+        const extracted: any = extractFormNameInputs({ inputs, data: formData });
+        if (isEdit || !extracted || extracted instanceof FormData) return extracted;
+        const cityId = Number((formData as any).cityId);
+        return { ...extracted, cityId: cityId > 0 ? cityId : undefined };
+      })(),
       endpoint: isEdit ? ["delivery"] : ["deliveryRegister"],
       method: isEdit ? "PUT" : "POST",
       customReset: () => reset(extractFormDefaultInputs(inputs, undefined) as any),
