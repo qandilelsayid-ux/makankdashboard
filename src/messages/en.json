@@ -3449,6 +3449,7 @@
   "popupPlacement_HOME": "Home",
   "popupPlacement_KIOSK": "Kiosk",
   "popupPlacement_MART": "Mart",
+  "driverCityIdTooltip": "A city admin only sees and assigns drivers of their own city. You can leave it empty and set it later.",
   "managedCityId": "Admin of city",
   "managedCityIdTooltip": "Pick a city to make this user an admin of that city only. Leave empty for the super admin team.",
   "cityAdminBadge": "City admin",
